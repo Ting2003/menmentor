@@ -33,7 +33,8 @@
 #include <algorithm>
 #include "sp_graph_table.h"
 #include "sp_node.h"
-
+#include <sstream>
+#include <fstream>
 
 using namespace std;
 //using namespace std::tr1;
@@ -97,7 +98,7 @@ public:
 
 	// C style output
 	void print();
-	void print_matlab(Matrix A);
+	void print_matrix(int my_id, Matrix A);
 	cholmod_common c, *cm;
 
 	// mpi related variables

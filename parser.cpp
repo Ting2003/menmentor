@@ -374,13 +374,13 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 
 	build_block_geo(my_id, mpi_class, tran, num_procs);
 
-	if(my_id==0) clog<<"after build block geo."<<endl;
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// temporary comment second parse	
-	if(my_id==0) clog<<"before second parse. "<<endl;
+	// if(my_id==0) clog<<"before second parse. "<<endl;
 	second_parse(my_id, mpi_class, tran, num_procs);
-	if(my_id==0) clog<<"after second parse."<<endl;
+
+	// if(my_id==0) clog<<"after second parse."<<endl;
 }
 
 void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
@@ -403,12 +403,10 @@ void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int n
 		0, MPI_COMM_WORLD);
 	/*clog<<my_id<<" "<<mpi_class.block_geo[0]<<" "<<mpi_class.block_geo[1]<<" "<<
 		mpi_class.block_geo[2]<<" "<<mpi_class.block_geo[3]<<endl;*/
-	if(my_id==0) clog<<"before net to block. "<<endl;	
 	if(my_id==0){
 		net_to_block(mpi_class.geo, mpi_class, tran, num_procs, my_id);
 	}
 
-	if(my_id==0) clog<<"after net to block. "<<endl;	
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	//if(my_id==3)
@@ -470,8 +468,10 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 	// release map_node resource
 	for(size_t i=0;i<(*p_ckts).size();i++){
 		Circuit * ckt = (*p_ckts)[i];
-		ckt->map_node.clear();
+		if(ckt->map_node.size()>0)
+			ckt->map_node.clear();
 	}
+	
 }// end of parse
 
 int Parser::get_num_layers() const{ return n_layer; }

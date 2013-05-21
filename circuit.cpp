@@ -285,14 +285,18 @@ void Circuit::print(){
 	}
 }
 
-void Circuit::print_matlab(Matrix A){
+void Circuit::print_matrix(int my_id, Matrix A){
 	// uncomment this if want to output to a file
-	//freopen("output.txt","w",stdout);
-
+	stringstream ss;
+	ss<<"output_"<<name<<"_"<<my_id<<".txt";
+	clog<<"print file name: "<<ss.str()<<endl;
+	FILE *f;
+	f = fopen(ss.str().c_str(),"w");
 	// don't output ground node
 	for(size_t i=0;i<A.size();i++){
-		printf("%d %d %.5e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
+		fprintf(f, "%d %d %.5e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
 	}
+	fclose(f);
 }
 ///////////////////////////////////////////////////////////////////////////////
 // Computation Functions
@@ -463,6 +467,8 @@ void Circuit::stamp_block_matrix(int &my_id, Matrix &A, MPI_CLASS &mpi_class){
 	 make_A_symmetric(block_info.bp, my_id);
 	
 	A.set_row(block_info.count);
+	if(A.size()>0)
+	print_matrix(my_id, A);
 	//if(my_id==0)
 		//check_matrix(A);
 		//cout<<"before CK_decomp. "<<endl;
