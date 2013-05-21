@@ -1,2 +1,4 @@
 # mpiexec example
-mpiexec -n 4 my_mpi_program arg1 arg2
+1. mpiexec -n 4 my_mpi_program arg1 arg2
+2. when copy the code from one folder to another, need to create a folder naming: INPUT_FILE under the same directory.
+
