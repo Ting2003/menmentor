@@ -99,6 +99,9 @@ public:
 	// C style output
 	void print();
 	void print_matrix(int my_id, Matrix A);
+
+	void print_rhs();
+	void print_solution();
 	cholmod_common c, *cm;
 
 	// mpi related variables

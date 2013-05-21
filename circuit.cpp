@@ -298,6 +298,34 @@ void Circuit::print_matrix(int my_id, Matrix A){
 	}
 	fclose(f);
 }
+
+void Circuit::print_rhs(){
+	// uncomment this if want to output to a file
+	stringstream ss;
+	ss<<"output_rhs_"<<name<<".txt";
+	clog<<"print file name: "<<ss.str()<<endl;
+	FILE *f;
+	f = fopen(ss.str().c_str(),"w");
+	// don't output ground node
+	for(size_t i=0;i<block_info.count;i++){
+		fprintf(f, "%d %.5e\n", i+1, block_info.bnewp[i]);
+	}
+	fclose(f);
+}
+
+void Circuit::print_solution(){
+	// uncomment this if want to output to a file
+	stringstream ss;
+	ss<<"output_sol_"<<name<<".txt";
+	clog<<"print file name: "<<ss.str()<<endl;
+	FILE *f;
+	f = fopen(ss.str().c_str(),"w");
+	// don't output ground node
+	for(size_t i=0;i<block_info.count;i++){
+		fprintf(f, "%d %.5e\n", i+1, block_info.xp[i]);
+	}
+	fclose(f);
+}
 ///////////////////////////////////////////////////////////////////////////////
 // Computation Functions
 
@@ -572,6 +600,8 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
 	//get_voltages_from_block_LU_sol();	
 	solve_DC(num_procs, my_id, mpi_class);
+	if(my_id==0)
+		print_solution();
 	//if(my_id==0)
 		//cout<<nodelist<<endl;
 
@@ -579,7 +609,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	// then sync
 	MPI_Barrier(MPI_COMM_WORLD);
 	
-	//return 0;
+	return 0;
 #if 1
 	for(size_t i=0;i<block_info.count;i++){
 		block_info.bp[i] = 0;
@@ -862,6 +892,8 @@ double Circuit::solve_iteration(int &my_id, int &iter,
 	for(size_t j=0;j<block_info.count;j++)
 		block_info.x_old[j] = block_info.xp[j];	
 
+	if(my_id==0)
+		print_rhs();
 	if(block_info.count>0){
 		block_info.solve_CK(cm);
 		block_info.xp = static_cast<double *>(block_info.x_ck->x);
