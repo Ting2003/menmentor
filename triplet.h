@@ -15,6 +15,7 @@
 
 #include <vector>
 #include <iostream>
+#include <map>
 #include "vec.h"
 #include "algebra.h"
 using namespace std;
@@ -25,6 +26,7 @@ public:
 	Triplet();
 	~Triplet();
 	void merge();
+	void merge_matrix(map<pair<long, long>, double> &matrix_map);
 	void clear();
 	void push_back(long i,long j,double x);
 	size_t size() const;

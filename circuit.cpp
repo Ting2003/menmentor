@@ -285,30 +285,81 @@ void Circuit::print(){
 	}
 }
 
-void Circuit::print_matrix(int my_id, Matrix A){
+void Circuit::print_matrix(Matrix A){
+	bool DEBUG_flag = true;
 	// uncomment this if want to output to a file
 	stringstream ss;
-	ss<<"output_"<<name<<"_"<<my_id<<".txt";
+	ss<<"OUTPUT_TRI/ibmpg6t_"<<name<<"_A.txt";
 	clog<<"print file name: "<<ss.str()<<endl;
+	// # build matrix merge map
+	pair<long, long> index_pair;
+	map<pair<long, long>, double> matrix_map;
+	A.merge_matrix(matrix_map);
+	
+	size_t count = 0;
+	map<pair<long, long>, double>::iterator it;
+	for(it = matrix_map.begin(); it != matrix_map.end(); it++){
+		count++;
+	}
+
+	//A.merge();
 	FILE *f;
 	f = fopen(ss.str().c_str(),"w");
-	// don't output ground node
-	for(size_t i=0;i<A.size();i++){
-		fprintf(f, "%d %d %.5e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
+
+# if 1
+	// print title line
+	fprintf(f, "\%%MatrixMarket matrix coordinate real general\n");
+	size_t num_nnz = (count-A.get_row())*2 + A.get_row();
+	// print 1st line
+	fprintf(f, "%d %d %d\n", A.get_row(), A.get_row(), num_nnz);
+# endif
+#if 0
+	fprintf(f, "\%%MatrixMarket matrix coordinate real symmetric\n");
+	fprintf(f, "%d %d %d\n", A.get_row(), A.get_row(), count);
+# endif
+	for(it = matrix_map.begin(); it != matrix_map.end(); it++){
+		fprintf(f, "%d %d %.10e\n", it->first.first+1, it->first.second+1, 
+			it->second);
+# if 1
+		if(it->first.first != it->first.second)
+			fprintf(f, "%d %d %.10e\n", it->first.second+1, 
+				it->first.first+1, it->second);
+# endif
+
 	}
+#if 0	// don't output ground node
+	for(size_t i=0;i<A.size();i++){
+		fprintf(f, "%d %d %.10e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
+# if DEBUG_flag
+		if(A.Ti[i] != A.Tj[i])
+			fprintf(f, "%d %d %.10e\n", A.Tj[i]+1, A.Ti[i]+1, A.Tx[i]);
+# endif
+	}
+#endif
 	fclose(f);
+	matrix_map.clear();
 }
 
 void Circuit::print_rhs(){
 	// uncomment this if want to output to a file
 	stringstream ss;
-	ss<<"output_rhs_"<<name<<".txt";
+	ss<<"OUTPUT_TRI/ibmpg6t_"<<name<<"_b.txt";
 	clog<<"print file name: "<<ss.str()<<endl;
 	FILE *f;
 	f = fopen(ss.str().c_str(),"w");
+	// print title line
+	fprintf(f, "%%MatrixMarket matrix array real general\n");
+	/*size_t count = 0;
+	for(size_t i=0;i<block_info.count;i++)
+		if(block_info.bnewp[i] !=0)
+			count++;
+	clog<<"count: "<<count<<endl;*/
+	// print 1st line
+	fprintf(f, "%d %d\n", block_info.count, 1);
+
 	// don't output ground node
 	for(size_t i=0;i<block_info.count;i++){
-		fprintf(f, "%d %.5e\n", i+1, block_info.bnewp[i]);
+		fprintf(f, "%.10e\n", block_info.bnewp[i]);
 	}
 	fclose(f);
 }
@@ -316,13 +367,18 @@ void Circuit::print_rhs(){
 void Circuit::print_solution(){
 	// uncomment this if want to output to a file
 	stringstream ss;
-	ss<<"output_sol_"<<name<<".txt";
+	ss<<"OUTPUT_TRI/ibmpg6t_"<<name<<"_x.txt";
 	clog<<"print file name: "<<ss.str()<<endl;
 	FILE *f;
 	f = fopen(ss.str().c_str(),"w");
+	// print title line
+	fprintf(f, "%%MatrixMarket matrix array real general\n");
+	// print 1st line
+	fprintf(f, "%d %d %d\n", block_info.count, 1, block_info.count);
+
 	// don't output ground node
 	for(size_t i=0;i<block_info.count;i++){
-		fprintf(f, "%d %.5e\n", i+1, block_info.xp[i]);
+		fprintf(f, "%d %.10e\n", i+1, block_info.xp[i]);
 	}
 	fclose(f);
 }
@@ -495,8 +551,6 @@ void Circuit::stamp_block_matrix(int &my_id, Matrix &A, MPI_CLASS &mpi_class){
 	 make_A_symmetric(block_info.bp, my_id);
 	
 	A.set_row(block_info.count);
-	if(A.size()>0)
-	print_matrix(my_id, A);
 	//if(my_id==0)
 		//check_matrix(A);
 		//cout<<"before CK_decomp. "<<endl;
@@ -600,10 +654,14 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
 	//get_voltages_from_block_LU_sol();	
 	solve_DC(num_procs, my_id, mpi_class);
-	if(my_id==0)
+	/*if(my_id==0){
+		// print_matrix_small(A);
+		print_matrix(A);
+		print_rhs();
 		print_solution();
-	//if(my_id==0)
-		//cout<<nodelist<<endl;
+	}*/
+	if(my_id==0)
+		cout<<nodelist<<endl;
 
 	//return true;
 	// then sync
@@ -892,8 +950,8 @@ double Circuit::solve_iteration(int &my_id, int &iter,
 	for(size_t j=0;j<block_info.count;j++)
 		block_info.x_old[j] = block_info.xp[j];	
 
-	if(my_id==0)
-		print_rhs();
+	//if(my_id==0)
+		// print_rhs();
 	if(block_info.count>0){
 		block_info.solve_CK(cm);
 		block_info.xp = static_cast<double *>(block_info.x_ck->x);
@@ -931,8 +989,8 @@ double Circuit::modify_voltage(int &my_id, Block &block, double * x_old){
 	//else OMEGA = 1.15;
 	OMEGA = 1.0;
 	for(size_t i=0;i<block.count;i++){
-		block.xp[i] = (1-OMEGA)*x_old[i] + OMEGA*
-			block.xp[i];
+		//block.xp[i] = (1-OMEGA)*x_old[i] + OMEGA*
+			// block.xp[i];
 		// update block nodes value
 		block.nodes[i]->rep->value = block.xp[i];
 		double diff = fabs(x_old[i] - block.xp[i]);
@@ -2929,8 +2987,8 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	while( iter < MAX_ITERATION ){
 		diff = solve_iteration(my_id, iter, num_procs, mpi_class);
 		iter++;
-		//if(my_id ==0)
-			//clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
+		// if(my_id ==0)
+			// clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
 		if( diff < EPSILON ){
 			successful = true;
 			break;
@@ -2938,9 +2996,10 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	}
 	double t2 = MPI_Wtime();
 	time = t2-t1;
-	/*if(my_id==0){
-		clog<<"# iter: "<<iter<<endl;
-	}*/
+	if(my_id==0){
+		clog<<"iter: "<<iter<<endl;
+		clog<<"time to solve circuit: "<<time<<endl;
+	}
 	get_voltages_from_block_LU_sol();
 }
 

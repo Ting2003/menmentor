@@ -98,7 +98,7 @@ public:
 
 	// C style output
 	void print();
-	void print_matrix(int my_id, Matrix A);
+	void print_matrix(Matrix A);
 
 	void print_rhs();
 	void print_solution();
