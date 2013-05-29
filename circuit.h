@@ -33,20 +33,19 @@
 #include <algorithm>
 #include "sp_graph_table.h"
 #include "sp_node.h"
-#include <sstream>
-#include <fstream>
+
 
 using namespace std;
-//using namespace std::tr1;
+// using namespace std::tr1;
 
 typedef vector<double> DoubleVector;
 typedef vector<Net *> NetPtrVector;
 typedef list<Net *> NetPtrList;
 typedef vector<Node *> NodePtrVector;
 typedef NetPtrVector NetList;
-#if 0
+
 // functor of translating Node * to void *
-namespace std{ 
+/*namespace std{ 
 	namespace tr1{
 		template<> struct hash< Node * >{
 			size_t operator()( const Node * x ) const {
@@ -54,8 +53,8 @@ namespace std{
 			}
 		};
 	}
-}
-#endif
+}*/
+
 class Circuit{
 public:
 	Circuit(string name="");
@@ -74,7 +73,7 @@ public:
 	bool add_node_bd(int &count, Node * node);
 	bool add_node_inter(int &count, Node * node);
 	
-	void add_node_inter_bd(Node *nd_0, Node *nd_1, float *geo_line, int &bid);
+	void add_node_inter_bd(Node *nd_0, Node *nd_1, double *geo_line, int &bid);
 
 	// add a net into netset
 	bool add_net(Net * net);
@@ -89,6 +88,9 @@ public:
 
 	// solve for node voltage
 	void solve(int &my_id, int &num_procs, MPI_CLASS &mpi_class, Tran &tran);
+	void block_solve(int my_id);
+	void block_solve_Jacobi(int my_id);
+	double find_diff(int my_id);
 	
 	static void set_parameters(double, double, double, size_t, int);
 	static void get_parameters(double&, double&, double&, size_t&, int&);
@@ -98,24 +100,21 @@ public:
 
 	// C style output
 	void print();
-	void print_matrix(Matrix A);
-
-	void print_rhs();
-	void print_solution();
-	cholmod_common c, *cm;
+	void print_matlab(Matrix A);
+	// cholmod_common c, *cm;
 
 	// mpi related variables
 	// member
 	// ******* processor 0  variable ********
 	// b_new_info is the global bd solution array
-	float *bd_x_g;
-	float *internal_x_g;	
+	double *bd_x_g;
+	double *internal_x_g;	
 	// ****** other processor *******
-	Matrix A;
+	// Matrix A;
 
 	// solution array for each processor
-	float *bd_x;	
-	float *internal_x;
+	double *bd_x;	
+	double *internal_x;
 
 	// stores boundary nodes value
 	int *bd_base;
@@ -188,8 +187,11 @@ private:
 	// updates nodes value in each iteration
 	double solve_iteration(int &my_id, int &iter, int&num_procs, MPI_CLASS &mpi_class);
 
-	void block_init(int &my_id, Matrix &A, MPI_CLASS &mpi_class);
-	void update_block_geometry();
+	void block_init(int &my_id, MPI_CLASS &mpi_class);
+	void build_bd_netlist();
+	void update_geometry(int my_id, MPI_CLASS & mpi_class);
+	void assign_block_nodes(int my_id);
+	void assign_block_nets(int my_id);
 
 	// methods of stamping the matrix
 	
@@ -243,7 +245,7 @@ private:
 	void assign_bd_internal_array(int &my_id);
 
 	void assign_bd_internal_array_dir(int &base, 
-		NodePtrVector &list, float *internal_x, int &my_id);
+		NodePtrVector &list, double *internal_x, int &my_id);
 
 	void reorder_bd_x_g(MPI_CLASS &mpi_class);
 
@@ -257,8 +259,8 @@ private:
 	double *temp;	
         int *id_map;
         //cholmod_factor *L;
-	double *Lx;
-	int *Li, *Lp, *Lnz;
+	/*double *Lx;
+	int *Li, *Lp, *Lnz;*/
 
 	void make_A_symmetric_tr(int &my_id, Tran &tran);
 
@@ -278,7 +280,7 @@ private:
 	void link_tr_nodes(Tran &tran);
 	void link_ckt_nodes(Tran &tran, int &my_id);
 	void save_tr_nodes(Tran &tran, double *x);
-	void save_ckt_nodes(Tran &tran, double *x);
+	void save_ckt_nodes(Tran &tran);//, double *x);
 
 	void print_tr_nodes(Tran &tran);
 
@@ -346,24 +348,28 @@ private:
 	NodePtrVector nodelist;		// a set of nodes
 	NodePtrVector replist;		// a set of representative nodes
 	NodePtrVector mergelist;	// nodes for merging
-	
+
+	// bd_netlist does not belong to net_set
+	NetPtrVector bd_netlist;	
 	NetList net_set[NUM_NET_TYPE];// should be the same as size of NET_TYPE
 	// defines the net direction in layers
 	static vector<LAYER_DIR> layer_dir;
 	vector<int> layers;
 	
 	// mapping from name to Node object pointer
+	//unordered_
 	map<string, Node*> map_node;
 
 	// mapping from Net pointer to their index in netlist
+	//unordered_
 	map<Net*, size_t> net_id;
 
 	// circuit name
 	string name;
 
 	// blocks
-	Block block_info;
-	size_t x_min, y_min, x_max, y_max;
+	vector<Block*> block_vec;
+	float x_min, y_min, x_max, y_max;
 
 	// control variables
 	static double EPSILON;
@@ -371,6 +377,10 @@ private:
 	static double OVERLAP_RATIO;
 	static size_t MAX_BLOCK_NODES;
 	static int MODE; // 0 = IT, 1 = LU
+	static int NUM_BLOCKS_X;
+	static int NUM_BLOCKS_Y;
+	static int DEBUG;
+	int num_blocks;
 
 	CIRCUIT_TYPE circuit_type;
 
@@ -481,7 +491,7 @@ inline bool Circuit::has_net(string name) const{
 inline Net * Circuit::get_net(string name){return map_net[name];}
 */
 
-bool compare_node_ptr(const Node *a, const Node *b);
+// bool compare_node_ptr(const Node *a, const Node *b);
 ostream & operator << (ostream & os, const NodePtrVector & nodelist);
 ostream & operator << (ostream & os, const NetList & nets);
 //ostream & operator << (ostream & os, const vector<Block > & block_info);
