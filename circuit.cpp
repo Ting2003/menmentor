@@ -42,8 +42,8 @@ const int MAX_ITERATION = 1000;
 const int SAMPLE_INTERVAL = 5;
 const size_t SAMPLE_NUM_NODE = 10;
 const double MERGE_RATIO = 0.3;
-int Circuit::NUM_BLOCKS_X = 1;
-int Circuit::NUM_BLOCKS_Y = 1;
+int Circuit::NUM_BLOCKS_X = 2;
+int Circuit::NUM_BLOCKS_Y = 2;
 int Circuit::DEBUG=1;
 
 //////////////////////////////////////////////////////////////////////////
@@ -576,8 +576,8 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
-	if(my_id==0)
-		cout<<nodelist<<endl;
+	//if(my_id==0)
+		//cout<<nodelist<<endl;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;
 		for(size_t i=0;i<block_vec.size();i++){
@@ -588,7 +588,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	// then sync
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	return 0;
+	//return 0;
 //#if 0
 	for(size_t i=0;i<block_vec.size();i++){
 		block_vec[i]->reset_array(block_vec[i]->bp);
