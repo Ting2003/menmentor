@@ -105,6 +105,7 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		else if ( (nd_ptr[i] = ckt->get_node(nd[i].name) ) == NULL ){
 			// create new node and insert
 			nd_ptr[i] = new Node(nd[i]); // copy constructor
+			nd_ptr[i]->ckt_name = ckt_name;
 			nd_ptr[i]->rep = nd_ptr[i];  // set rep to be itself
 			count = cpr_nd_block(nd_ptr[i], mpi_class.block_geo, my_id);
 			if (count==1) // internal node
@@ -269,8 +270,10 @@ void Parser::update_node(Net * net){
 			b->set_nbr(SOUTH, net);
 			Circuit::layer_dir[layer] = VT;
 		}
-		else
+		else{
+			clog<<"diagonal net: "<<*net<<endl;
 			report_exit("Diagonal net\n");
+		}
 	}
 	else if( //fzero(net->value) && 
 		 !a->is_ground() &&
