@@ -49,8 +49,6 @@ int Circuit::DEBUG=1;
 //////////////////////////////////////////////////////////////////////////
 // Constructor and utility functions goes here
 
-vector<LAYER_DIR> Circuit::layer_dir(MAX_LAYER);
-
 // constructor of Circuit class, name is optional
 Circuit::Circuit(string _name):name(_name),
 	x_min(INFTY),y_min(INFTY),x_max(0),y_max(0),
@@ -59,9 +57,6 @@ Circuit::Circuit(string _name):name(_name),
 	Node * gnd = new Node(string("0"), Point(-1,-1,-1));
 	gnd->rep = gnd;
 	this->add_node(gnd);
-
-	for(int i=0;i<MAX_LAYER;i++)
-		layer_dir[i]=NA;
 
 	// mpi relate	
 	bd_x_g=NULL;
@@ -1564,7 +1559,7 @@ void Circuit::set_parameters(
 void Circuit::select_omega(){
 	double omega=OMEGA;
 	size_t num_nodes = replist.size();
-	size_t num_layers = layers.size();
+	//size_t num_layers = layers.size();
 	if( num_nodes < 0.05e6 )
 		omega=1.0;
 	else if (num_nodes < 0.2e6 )
@@ -1578,7 +1573,7 @@ void Circuit::select_omega(){
 	else
 		omega = 1.5;
 
-	if( circuit_type == WB && num_layers >= 8 ) omega += 0.2;
+	//if( circuit_type == WB && num_layers >= 8 ) omega += 0.2;
 
 	if( circuit_type == C4 ) omega += 0.1;
 

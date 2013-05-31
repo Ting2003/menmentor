@@ -30,7 +30,7 @@ public:
 	Node get_nbr_node(Node node, DIRECTION dir) const;
 	Node * get_nbr_node(DIRECTION dir) const;
 
-	int get_layer() const;
+	//int get_layer() const;
 
 	int isS() const;
 	bool is_ground() const;
@@ -83,7 +83,7 @@ inline int Node::isS() const{return flag;}
 // use a tricky way to speed up
 inline bool Node::is_ground() const{return pt.x<0;}
 
-inline int Node::get_layer() const{ return pt.z; }
+//inline int Node::get_layer() const{ return pt.z; }
 
 inline double Node::get_value() const{return value;}
 

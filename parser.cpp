@@ -255,30 +255,28 @@ void Parser::update_node(Net * net){
 			b->set_nbr(TOP, net);
 		}
 	}
-	else if( a->get_layer() == b->get_layer() && a->pt != b->pt ){
+	else if( a->pt.z == b->pt.z && a->pt != b->pt ){
 		// horizontal or vertical resistor in the same layer
-		int layer = a->get_layer();
 		if( a->pt.y == b->pt.y ){// horizontal
 			if(a->pt.x > b->pt.x) swap<Node*>(a,b);
 			a->set_nbr(EAST, net);
 			b->set_nbr(WEST, net);
-			Circuit::layer_dir[layer] = HR;
 		}
 		else if( a->pt.x == b->pt.x ){// vertical
 			if(a->pt.y > b->pt.y) swap<Node*>(a,b);
 			a->set_nbr(NORTH, net);
 			b->set_nbr(SOUTH, net);
-			Circuit::layer_dir[layer] = VT;
 		}
+		// diagonal net
 		else{
-			clog<<"diagonal net: "<<*net<<endl;
-			report_exit("Diagonal net\n");
+			diag_net_set.push_back(net);
+			// report_exit("Diagonal net\n");
 		}
 	}
 	else if( //fzero(net->value) && 
 		 !a->is_ground() &&
 		 !b->is_ground() ){// this is Via (Voltage or Resistor )
-		if( a->get_layer() > b->get_layer() ) swap<Node*>(a,b);
+		if( a->pt.z > b->pt.z ) swap<Node*>(a,b);
 		a->set_nbr(TOP, net);
 		b->set_nbr(BOTTOM, net);
 	}
@@ -458,6 +456,13 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 				break;
 		}
 	}
+	clog<<"diagonal net size: "<<diag_net_set.size()<<endl;
+	for(size_t i=0; i < diag_net_set.size();i++){
+		Net *net = diag_net_set[i];
+		bool flag_map = map_res_net(net);
+		clog<<"diagonal net: "<<*net<< " mapped: "<< flag_map<< endl;
+	}
+
 	fclose(f);
 	// release map_node resource
 	for(size_t i=0;i<(*p_ckts).size();i++){
@@ -869,23 +874,6 @@ void Parser::InitialOF(vector<FILE *> & of, int &num_blocks, int &color){
 	}
 }
 
-bool Parser::Is_Top_Layer_Net(Node &p, Node &q){
-	bool flag = false;
-	for(int i=0;i<(*p_ckts).size();i++){
-		Circuit *ckt = (*p_ckts)[i];
-		int layers = ckt->layers.size();
-		//for(int j=0;j<layers;j++)
-			//clog<<"layers: "<<ckt->layers[j]<<endl;
-		// both are top layer node
-		if (p.pt.z == ckt->layers[layers-1] &&
-		    q.pt.z == ckt->layers[layers-1]){
-			flag = true;
-			break;
-		}
-	}
-	return flag;
-}
-
 void Parser::insert_node_list(Node *nd_0, Node *nd_1, int &count_10, 
 		int &count_20, int &count_1, int &count_2, NodePtrVector &list, bool &flag){
 	// add into bd boundary list
@@ -1028,4 +1016,99 @@ void Parser::write_print(Tran &tran, vector<FILE *> &of, MPI_CLASS &mpi_class, c
 		fprintf(of[j], "\n");
 	}
 	name_vec.clear();
+}
+
+// only fit for the same layer net
+// map net into horizontal or vertical dir
+bool Parser::map_res_net(Net*net){
+	Node *a = net->ab[0];
+	Node *b = net->ab[1];
+	if(a->is_ground() || b->is_ground())
+		return true;
+	long xa = a->pt.x;
+	long ya = a->pt.y;
+		
+	long xb = b->pt.x;
+	long yb = b->pt.y;
+
+	long delta_x = abs(xa-xb);
+	long delta_y = abs(ya-yb);
+
+	double tan = 1.0* delta_y / delta_x;
+	// 45 degree
+	double ref = 1.0* sqrt(2) / 2;
+	// > 45 degree, goes to y then x dir
+	if(tan - ref > 1e-5){
+		// clog<<" > 45 degree. "<<endl;
+		bool flag_y = map_net_y(net);
+		if(flag_y == true) return true;
+		bool flag_x = map_net_x(net);
+		if(flag_x == true) return true;	
+		// clog<<"not empty for both south and north. "<<endl;
+	}
+	// <= 45 degree, goes to x dir
+	else{
+		// clog<<" < 45 degree. "<<endl;
+		bool flag_x = map_net_x(net);
+		if(flag_x == true) 
+			return true;
+		bool flag_y = map_net_y(net);
+		if(flag_y == true) 
+			return true;	
+		// clog<<"not empty for both south and north. "<<endl;	
+	}
+	clog<<"no spot to map the net. Fault. "<<endl;
+	return false;
+}
+
+// project along y direction
+bool Parser::map_net_y(Net *net){
+	Node *a = net->ab[0];
+	Node *b = net->ab[1];
+	long xa = a->pt.x;
+	long xb = b->pt.x;
+	long ya = a->pt.y;
+	long yb = b->pt.y;
+	
+	if(ya < yb && b->nbr[SOUTH] == NULL && a->nbr[NORTH] == NULL){
+		b->set_nbr(SOUTH, net);
+		a->set_nbr(NORTH, net);
+		clog<<"SOUTH of: "<<*b<<" NORTH of "<<*a<<endl;
+		return true;
+	}
+	else if(yb < ya && b->nbr[NORTH] == NULL && a->nbr[SOUTH] == NULL){
+		b->set_nbr(NORTH, net);
+		a->set_nbr(SOUTH, net);
+
+		clog<<"NORTH of: "<<*b<<" SOUTH of "<<*a<<endl;
+		return true;
+	}
+	return false;
+}
+
+// project along x direction
+bool Parser::map_net_x(Net *net){
+	Node *a = net->ab[0];
+	Node *b = net->ab[1];
+	long xa = a->pt.x;
+	long xb = b->pt.x;
+	long ya = a->pt.y;
+	long yb = b->pt.y;
+	
+	if(xa < xb && a->nbr[EAST] == NULL && b->nbr[WEST] == NULL){
+		a->set_nbr(EAST, net);
+		b->set_nbr(WEST, net);
+
+		clog<<"WEST of: "<<*b<<" EAST of "<<*a<<endl;
+		return true;
+
+	}
+	else if(xb < xa && b->nbr[EAST] == NULL && a->nbr[WEST] == NULL){
+		b->set_nbr(EAST, net);
+		a->set_nbr(WEST, net);
+
+		clog<<"WEST of: "<<*a<<" EAST of "<<*b<<endl;
+		return true;
+
+	}
 }

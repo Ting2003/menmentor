@@ -80,6 +80,9 @@ public:
 
 	void InitialIF(vector<FILE *> & ifs, int &my_id, int &block_size, int &color);
 	
+	bool map_res_net(Net*net);
+	bool map_net_x(Net *net);
+	bool map_net_y(Net *net);
 private:
 	int create_circuits(vector<CKT_NAME> &ckt_name_info);		// parse the file and create circuits
 
@@ -87,7 +90,6 @@ private:
 	int extract_ckt_name(int &my_id, vector<CKT_NAME>&ckt_name_vec, MPI_CLASS &mpi_class, Tran &tran);
 	bool sort(vector <CKT_NAME> &a);
 	
-	bool Is_Top_Layer_Net(Node &p, Node &q);
 	void try_change_via(Net *);
 
 	//void insert_net_node(string line);
@@ -98,6 +100,7 @@ private:
 	char * filename;		  // input file name
 	// int n_layer;			  // total number of layers
 	vector<Circuit*> * p_ckts;	  // pointer to circkt list
+	vector<Net*> diag_net_set;
 	// vector<int> layer_in_ckt;	  // which circuit a layer belong
 };
 

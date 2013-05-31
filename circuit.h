@@ -66,8 +66,6 @@ public:
 	Net * get_net(string name);
 	string get_name() const;
 
-	static size_t get_total_num_layer();
-
 	// add a node into nodelist
 	bool add_node(Node * nd);
 	bool add_node_bd(int &count, Node * node);
@@ -353,8 +351,8 @@ private:
 	NetPtrVector bd_netlist;	
 	NetList net_set[NUM_NET_TYPE];// should be the same as size of NET_TYPE
 	// defines the net direction in layers
-	static vector<LAYER_DIR> layer_dir;
-	vector<int> layers;
+	// static vector<LAYER_DIR> layer_dir;
+	// vector<int> layers;
 	
 	// mapping from name to Node object pointer
 	//unordered_
@@ -388,8 +386,6 @@ private:
 
 	double VDD;
 };
-
-inline size_t Circuit::get_total_num_layer(){return layer_dir.size();}
 
 // adds a node into nodelist
 inline bool Circuit::add_node(Node * node){
