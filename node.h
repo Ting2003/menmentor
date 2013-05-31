@@ -62,6 +62,8 @@ public:
 	// if =1, internal bd node,
 	// if =0, general internal node.
 	int internal_bd;
+	// stores whether 
+	string network;
 
 private:
 	double value;		// voltage

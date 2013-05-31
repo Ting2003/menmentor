@@ -36,7 +36,7 @@ public:
 	// parser a input file and construct the circuit
 	void parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs);
 
-	int get_num_layers() const;
+	//int get_num_layers() const;
 
 	// functions for block
 	void set_block_geometry(float *geo, MPI_CLASS &mpi_class);
@@ -83,8 +83,9 @@ public:
 private:
 	int create_circuits(vector<CKT_LAYER> &ckt_name_info);		// parse the file and create circuits
 
-	int extract_layer(int &my_id, vector<CKT_LAYER >&ckt_layer_info, MPI_CLASS &mpi_class, Tran &tran);
-	bool sort(vector <CKT_LAYER> &a);
+	//int extract_layer(int &my_id, vector<CKT_LAYER >&ckt_layer_info, MPI_CLASS &mpi_class, Tran &tran);
+	int extract_networks(int &my_id, MPI_CLASS &mpi_class, Tran &tran);
+	//bool sort(vector <CKT_LAYER> &a);
 	
 	bool Is_Top_Layer_Net(Node &p, Node &q);
 	void try_change_via(Net *);
@@ -95,15 +96,17 @@ private:
 	void update_node(Net * net);
 
 	char * filename;		  // input file name
-	int n_layer;			  // total number of layers
+	// int n_layer;			  // total number of layers
 	vector<Circuit*> * p_ckts;	  // pointer to circkt list
-	vector<int> layer_in_ckt;	  // which circuit a layer belong
+	// vector<int> layer_in_ckt;	  // which circuit a layer belong
 };
 
 // Trick: try to modify the net
 inline void Parser::try_change_via(Net * net){
 	// is it a via?
-	if( net->ab[0]->get_layer() == net->ab[1]->get_layer() )
+	// if( net->ab[0]->get_layer() == net->ab[1]->get_layer() )
+
+	if( net->ab[0]->pt.z == net->ab[1]->pt.z )
 		return;
 
 	// make it a zero voltage via
