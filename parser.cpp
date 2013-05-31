@@ -20,8 +20,7 @@
 using namespace std;
 
 // store the pointer to circuits
-Parser::Parser(vector<Circuit*> * ckts):n_layer(0), p_ckts(ckts),
-	layer_in_ckt(vector<int>(MAX_LAYER)){
+Parser::Parser(vector<Circuit*> * ckts):p_ckts(ckts){
 }
 
 Parser::~Parser(){ }
@@ -329,7 +328,7 @@ int Parser::create_circuits(vector<CKT_LAYER > &ckt_name_info){
 
 // parse the file
 // Note: the file will be parsed twice
-// the first time is to find the layer information
+// the first time is to find the network information
 // and the second time is to create nodes
 void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs){	
 	MPI_Datatype MPI_Vector;
@@ -347,9 +346,9 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 
 	// processor 0 will extract layer info
 	// and bcast it into other processor
-	vector<CKT_LAYER >ckt_name_info;
+	vector<CKT_NAME >ckt_name;
 	if(my_id==0)
-		extract_layer(my_id, ckt_name_info, mpi_class, tran);
+		extract_ckt_name(my_id, ckt_name_info, mpi_class, tran);
 	// broadcast info for transient 
 	
 	int ckt_name_info_size = ckt_name_info.size();
@@ -513,8 +512,8 @@ void Parser::parse_dot(char *line, Tran &tran){
 	}
 }
 
-int Parser::extract_layer(int &my_id, 
-		vector<CKT_LAYER > &ckt_layer_info,
+int Parser::extract_ckt_name(int &my_id, 
+		vector<CKT_NAME > &ckt_name_vec,
 		MPI_CLASS &mpi_class,
 		Tran &tran){
 	char line[MAX_BUF];
@@ -539,7 +538,10 @@ int Parser::extract_layer(int &my_id,
 	f = fopen(filename, "r");
 	if(f==NULL) report_exit("Input file not exist!\n");
 
-	CKT_LAYER ckt_name_layer;
+	CKT_NAME ckt_name;
+
+	// skip the first comment line
+	fgets(line, MAX_BUF, f);
 
 	while(fgets(line, MAX_BUF, f)!=NULL){
 		if(line[0]=='*'){
@@ -551,28 +553,10 @@ int Parser::extract_layer(int &my_id,
 			while(ss.getline(word, 10, ' ')){
 				if(word_count ==1){
 					word_s = word;
-					if(word_s !="layer:"){
-						break;
-					}
+					strcpy(ckt_name, word);
+					ckt_name_vec.push_back(ckt_name);	
 				}
-				if(word_count==2){
-					stringstream ss_1;
-					ss_1<<word;
-					int vdd_count=0;
-					while(ss_1.getline(name, 10,',')){
-						if(vdd_count==1){
-							// extract ckt->name
-							strcpy(ckt_name_layer.name, name);
-						}
-						vdd_count++;
-					}
-				}
-				// extract layer number
-				if(word_count==4){
-					ckt_name_layer.layer = atoi(word);
-					ckt_layer_info.push_back(ckt_name_layer);
-					//fprintf(fp, "%s \n", word);
-				}
+				if(word_count >=2) break;	
 				word_count++;
 			}
 		}
@@ -611,8 +595,8 @@ int Parser::extract_layer(int &my_id,
 }
 // sort ckt according to its name and layer
 // ckt name decrease, layer rising
-bool Parser::sort(vector<CKT_LAYER > &a){
-	CKT_LAYER tmp;
+bool Parser::sort(vector<CKT_NAME > &a){
+	CKT_NAME tmp;
 	// sort according to circuit name
 	for(size_t i=0;i< a.size()-1;i++){
 		int minIndex = i;

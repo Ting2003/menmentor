@@ -63,7 +63,7 @@ public:
 	// if =0, general internal node.
 	int internal_bd;
 	// stores whether 
-	string network;
+	string ckt_name;
 
 private:
 	double value;		// voltage

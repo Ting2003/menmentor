@@ -22,9 +22,9 @@
 #include <sstream>
 using std::vector;
 
-struct CKT_LAYER{
+struct CKT_NAME{
 	char name[10];
-	int layer;
+	// int layer;
 };
 // given an input file, parse it and store corresponding result into Circuit
 class Parser{
@@ -81,11 +81,11 @@ public:
 	void InitialIF(vector<FILE *> & ifs, int &my_id, int &block_size, int &color);
 	
 private:
-	int create_circuits(vector<CKT_LAYER> &ckt_name_info);		// parse the file and create circuits
+	int create_circuits(vector<CKT_NAME> &ckt_name_info);		// parse the file and create circuits
 
 	//int extract_layer(int &my_id, vector<CKT_LAYER >&ckt_layer_info, MPI_CLASS &mpi_class, Tran &tran);
-	int extract_networks(int &my_id, MPI_CLASS &mpi_class, Tran &tran);
-	//bool sort(vector <CKT_LAYER> &a);
+	int extract_ckt_name(int &my_id, vector<CKT_NAME>&ckt_name_vec, MPI_CLASS &mpi_class, Tran &tran);
+	bool sort(vector <CKT_NAME> &a);
 	
 	bool Is_Top_Layer_Net(Node &p, Node &q);
 	void try_change_via(Net *);

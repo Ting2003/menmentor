@@ -14,7 +14,7 @@ Node::Node():name(""),pt(Point(-1,-1,-1)), rid(0),
 	rid = -1;
 	flag_bd = 0;
 	internal_bd = 0;
-	network = "";
+	ckt_name = "";
 }
 
 Node::~Node (){
@@ -35,7 +35,7 @@ Node::Node(string n, Point _pt, int x, double v):
 	rid = -1;
 	flag_bd = 0;
 	internal_bd = 0;
-	network = "";
+	ckt_name = "";
 }
 
 Node::Node(const Node & nd){
@@ -53,7 +53,7 @@ Node::Node(const Node & nd){
 	}
 	flag_bd = nd.flag_bd;
 	internal_bd = nd.internal_bd;
-	network = nd.network;
+	ckt_name = nd.ckt_name;
 }
 
 Node & Node::operator = (const Node & nd){
