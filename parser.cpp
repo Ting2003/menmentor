@@ -75,19 +75,27 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	Node * nd_ptr[2];	// this will be set to the two nodes found
 	double value;
 	int count=0;
-
+	
+	char *chs_1;
+	char *saveptr_1;
+	const char *sep_1 = "_";
+	
 	sscanf(line, "%s %s %s %lf", sname, sa, sb, &value);
-
+	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
+	// ckt name
+	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
+	string ckt_name;
+	ckt_name.append(chs_1);
+	
 	extract_node(sa, nd[0]);
 	extract_node(sb, nd[1]);
 
-	int layer;
-	if( nd[0].is_ground() ) 
-		layer = nd[1].get_layer();
-	else
-		layer = nd[0].get_layer();
-
-	int ckt_id = layer_in_ckt[layer];
+	int ckt_id = 0;
+ 	for(size_t i=0;i<(*p_ckts).size();i++)
+		if((*p_ckts)[i]->name == ckt_name){
+		ckt_id = i;
+		break;
+	}	
 	Circuit * ckt = (*p_ckts)[ckt_id];
 	
 	for(int i=0;i<2;i++){
@@ -287,17 +295,15 @@ void Parser::update_node(Net * net){
 }
 
 // parse the file and create circuits
-int Parser::create_circuits(vector<CKT_LAYER > &ckt_name_info){
+int Parser::create_circuits(vector<CKT_NAME> &ckt_name_vec){
 	int layer, n_circuit=0;
 
 	string prev_ckt_name("");
 	string name_string;
 	Circuit * p_last_circuit=NULL;
 	// now read filename.info to create circuits (they are SORTED)
-	for(size_t i=0;i<ckt_name_info.size();i++){
-		name_string = ckt_name_info[i].name;
-		layer = ckt_name_info[i].layer;
-		//cout<<name_string<<":"<<layer<<endl;
+	for(size_t i=0;i<ckt_name_vec.size();i++){
+		name_string = ckt_name_vec[i].name;
 		// compare with previous circuit name 
 		//name_string.assign(name);
 		if( prev_ckt_name == "" ||
@@ -308,21 +314,7 @@ int Parser::create_circuits(vector<CKT_LAYER > &ckt_name_info){
 			prev_ckt_name = name_string;
 			p_last_circuit = circuit;
 		}
-
-		p_last_circuit->layers.push_back(layer);
-
-		// note that initial size may not be accurate
-		if( layer > (int)layer_in_ckt.size()-1 ) 
-			layer_in_ckt.resize(layer+10); // 10 can be a arbitrary num.
-
-		layer_in_ckt[layer] = n_circuit-1; // map layer id to circuit id
-		this->n_layer++;
-	}
-	
-	// now we know the correct number of layers
-	layer_in_ckt.resize(this->n_layer);
-	Circuit::layer_dir.resize(this->n_layer);
-
+	}	
 	return n_circuit;
 }
 
@@ -332,11 +324,11 @@ int Parser::create_circuits(vector<CKT_LAYER > &ckt_name_info){
 // and the second time is to create nodes
 void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs){	
 	MPI_Datatype MPI_Vector;
-	int count =2;
-	int lengths[2] = {10, 1};
-	MPI_Aint offsets[2] = {0, sizeof(char)*10};
-	MPI_Datatype types[3]={MPI_CHAR, MPI_INT};
-	MPI_Type_struct(count, lengths, offsets, types, 
+	int count =1;
+	int lengths = 10;
+	MPI_Aint offsets = 0;
+	MPI_Datatype types[2]={MPI_CHAR};
+	MPI_Type_struct(count, &lengths, &offsets, types, 
 			&MPI_Vector);
 	int error = MPI_Type_commit(&MPI_Vector);
 
@@ -346,19 +338,19 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 
 	// processor 0 will extract layer info
 	// and bcast it into other processor
-	vector<CKT_NAME >ckt_name;
+	vector<CKT_NAME >ckt_name_vec;
 	if(my_id==0)
-		extract_ckt_name(my_id, ckt_name_info, mpi_class, tran);
+		extract_ckt_name(my_id, ckt_name_vec, mpi_class, tran);
 	// broadcast info for transient 
 	
-	int ckt_name_info_size = ckt_name_info.size();
+	int ckt_name_size = ckt_name_vec.size();
 	
-	MPI_Bcast(&ckt_name_info_size, 1, MPI_INT, 0,
+	MPI_Bcast(&ckt_name_size, 1, MPI_INT, 0,
 			MPI_COMM_WORLD);
-	if(my_id!=0) ckt_name_info.resize(ckt_name_info_size);
+	if(my_id!=0) ckt_name_vec.resize(ckt_name_size);
 
 	if(my_id==0) clog<<"before bcast mpi_vector"<<endl;
-	MPI_Bcast(&ckt_name_info[0], ckt_name_info_size, 
+	MPI_Bcast(&ckt_name_vec[0], ckt_name_size, 
 			MPI_Vector, 0, MPI_COMM_WORLD);
 
 	if(my_id==0) clog<<"after bcast mpi_vector"<<endl;
@@ -367,7 +359,7 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 		clog<<ckt_name_info[i].name<<" "<<ckt_name_info[i].layer<<endl;
 	}*/
 	// first time parse:
-	create_circuits(ckt_name_info);
+	create_circuits(ckt_name_vec);
 	
 	if(my_id==0) clog<<"after create circuits"<<endl;
 
@@ -473,8 +465,6 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 	
 }// end of parse
 
-int Parser::get_num_layers() const{ return n_layer; }
-
 // done by core 0
 void Parser::parse_dot(char *line, Tran &tran){
 	char *chs;
@@ -531,6 +521,7 @@ int Parser::extract_ckt_name(int &my_id,
 	long y_max=0;
 	long y_min=0;
 
+
 	// only processor 0 will extract layer info
 	if(my_id!=0) return 0;
 
@@ -552,8 +543,7 @@ int Parser::extract_ckt_name(int &my_id,
 			int word_count = 0;
 			while(ss.getline(word, 10, ' ')){
 				if(word_count ==1){
-					word_s = word;
-					strcpy(ckt_name, word);
+					strcpy(ckt_name.name, word);
 					ckt_name_vec.push_back(ckt_name);	
 				}
 				if(word_count >=2) break;	
@@ -563,6 +553,7 @@ int Parser::extract_ckt_name(int &my_id,
 		else if(line[0]!='.'){
 			// find grid boundary x and y
 			sscanf(line, "%s %s %s %lf", sname,sa,sb, &value);
+				
 			if( sa[0] != '0' ) 
 				extract_node(sa, nd[0]);
 
@@ -590,7 +581,7 @@ int Parser::extract_ckt_name(int &my_id,
 	mpi_class.y_min = y_min;
 	fclose(f);
 	// sort resulting vector by the ckt name
-	sort(ckt_layer_info);
+	sort(ckt_name_vec);
 	return 0;
 }
 // sort ckt according to its name and layer
@@ -655,8 +646,8 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 	static char sa[MAX_BUF];
 	static char sb[MAX_BUF];
 	static Node nd[2];
-	double value;
-
+	double value;	
+	
 	int temp = 0;
 
 	FILE *f;
