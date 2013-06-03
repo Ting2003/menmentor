@@ -153,20 +153,20 @@ bool compare_node_ptr(const Node * a, const Node * b){
 	if( a->is_ground() ) return false;
 	if (b->is_ground() ) return true;
 
-	if( a->pt.y == b->pt.y ){
-		if( a->pt.x == b->pt.x ){
-			if( a->pt.z == b->pt.z ){
+	if( a->pt_vec[0].y == b->pt_vec[0].y ){
+		if( a->pt_vec[0].x == b->pt_vec[0].x ){
+			if( a->pt_vec[0].z == b->pt_vec[0].z ){
 				return (a->isS() > b->isS());
 			}
 			else{
-				return (a->pt.z > b->pt.z);// top down
+				return (a->pt_vec[0].z > b->pt_vec[0].z);// top down
 			}
 		}
 		else
-			return ( a->pt.x < b->pt.x );
+			return ( a->pt_vec[0].x < b->pt_vec[0].x );
 	}
 	else
-		return (a->pt.y < b->pt.y);
+		return (a->pt_vec[0].y < b->pt_vec[0].y);
 }
 
 void Block::sort_nodes(){
@@ -175,8 +175,8 @@ void Block::sort_nodes(){
 
 // judge whether a node is within a block
 bool Block::node_in_block(Node *nd){
-	long x = nd->pt.x;
-	long y = nd->pt.y;
+	long x = nd->pt_vec[0].x;
+	long y = nd->pt_vec[0].y;
 	// if a node belongs to some block
 	if(x>=lx && x <ux && 
 		y>=ly && y<uy){
@@ -320,30 +320,43 @@ void Block::stamp_resistor(int &my_id, Net * net){
 			size_t l1 = nd_IdMap[nl];//nl->rid;
 			// if(my_id==0 &&(k1 == 567 || l1 == 567 ))
 				// clog<<"net: "<<*net<<endl;
-			if( !nk->is_ground()&&  
-          			(nk->nbr[TOP]== NULL ||
-				 nk->nbr[TOP]->type != INDUCTANCE)){
-				/*if(my_id==0 && k1==567)//nk->isS()!=Z && nk->isS()!=X && nl->isS()!=Z && nl->isS()!=Z)
-				 {	//cout<<*net<<endl;
-					cout<<*nk<<" "<<k1<<endl;
-					cout<<"push + ("<<*nk<<" "<<*nl<<" "<<k1<<","<<k1<<","<<G<<")"<<endl;
-				 }*/
-				A.push_back(k1,k1, G);
-			}
+			// search nk's nbr, skip insert for vol and induc nbr net
+			if(!nk->is_ground()){
+				bool flag = false;
+				for(size_t i=0;i<nk->nbr_vec.size();i++){
+					Net *net = nk->nbr_vec[i];
+					if(net->type == INDUCTANCE || 
+					   net->type == VOLTAGE){
+					   flag = true;
+					   break;
+					}
+				}
+				// if no inductance or voltage nbr net, stamp
+				if(flag == false){
+					A.push_back(k1, k1, G);
+				}
+			}	
 			
 			if(!nk->is_ground() && 
-				!nl->is_ground() && 
-				l1 < k1 &&
-				(nl->nbr[TOP] ==NULL ||
-				 nl->nbr[TOP]->type != INDUCTANCE)){ // only store the lower triangular part{	
-				// if(my_id==0 && l1 ==567) cout<<"push -("<<*nk<<" "<<*nl<<" ("<<k1<<","<<l1<<","<<-G<<")"<<endl;
-				A.push_back(k1,l1,-G);
-				//}
+			   !nl->is_ground() && 
+			   l1 < k1){
+				bool flag = false;				
+				for(size_t i=0;i<nl->nbr_vec.size();i++){
+					Net *net = nl->nbr_vec[i];
+					if(net->type == INDUCTANCE || 
+					   net->type == VOLTAGE){
+						flag = true;
+						break;
+					}
+				}
+				if(flag == false)
+					A.push_back(k1,l1,-G);
 			}
 		}
 	}// end of for j		
 }
 
+// only bottom layer has current net, no need to check Voltage net
 void Block::stamp_current(int &my_id, Net * net, MPI_CLASS &mpi_class){
 	Node * nk = net->ab[0]->rep;
 	Node * nl = net->ab[1]->rep;
@@ -374,29 +387,28 @@ void Block::stamp_VDD(int &my_id, Net * net){
 	//if(my_id==0) clog<<"net: "<<*net<<endl;
 	if( X->is_ground() ) X = net->ab[1]->rep;
 
-	if(!node_in_block(X->rep)) return;
+	if(!node_in_block(X)) return;
 	// if(X->rep->flag_bd ==1) return;
 	// do stamping for internal node
-	long id =nd_IdMap[X->rep];//X->rep->rid;
+	long id =nd_IdMap[X];//X->rep->rid;
 
 	// if(my_id==0) clog<<" stamp net: "<<*net<<endl;
 	A.push_back(id, id, 1.0);
-	// if(my_id==0) clog<<"push ("<<id<<", "<<id<<", 1.0)"<<endl;
-	Net * south = X->rep->nbr[SOUTH];
-	if( south != NULL &&
-			south->type == CURRENT ){
-		// this node connects to a VDD and a current
-		// the current should be stamped
-		//assert( feqn(1.0, q[id]) ); 
-		assert( feqn(1.0, bp[id]) );
+	
+	bool flag = false;
+	for(size_t i=0;i<X->nbr_vec.size();i++){
+		Net *net_temp = X->nbr_vec[i];
+		if(net_temp->type == CURRENT){
+			flag = true;
+			break;	
+		}
+	}
+	// if vol node connects to current net
+	if(flag == true){
 		bp[id] = net->value;
-		//q[id] = net->value;	    // modify it
 	}
-	else{
-		bp[id] += net->value;
-		//q[id] += net->value;
-	}
-
+	else
+		bp[id] += net->value;	
 	// if(my_id==0) clog<<"id, bp: "<<id<<", "<<bp[id]<<endl;
 }
 
@@ -437,6 +449,7 @@ void Block::stamp_inductance_dc(Net * net, int &my_id){
 	}
 }
 
+// search for the nodes connects to inductance and voltage sources
 void Block::make_A_symmetric(double *b, int &my_id){
 	int type = RESISTOR;
 	NetList & ns = net_set[type];
@@ -445,22 +458,41 @@ void Block::make_A_symmetric(double *b, int &my_id){
 
 	for(it=ns.begin();it!=ns.end();it++){
            if( (*it) == NULL ) continue;
+	   Node *na = (*it)->ab[0]->rep;
+	   Node *nb = (*it)->ab[1]->rep;
+ 
            assert( fzero((*it)->value) == false );
-           if(!((*it)->ab[0]->rep->isS()==X || (*it)->ab[1]->rep->isS()==X)) continue;
+	   // the resistor net connects to voltage nets
+           if(!(na->isS()==Y || nb->isS()==Y)) continue;
 
-           // node p points to X node
-           if((*it)->ab[0]->rep->isS()==X && ((*it)->ab[0]->rep->nbr[TOP]!=NULL && 
-                (*it)->ab[0]->rep->nbr[TOP]->type==INDUCTANCE)){
-              p = (*it)->ab[0]->rep; q = (*it)->ab[1]->rep;
-           } 
-           else if((*it)->ab[1]->rep->isS()==X && ((*it)->ab[1]->rep->nbr[TOP]!=NULL && 
-                (*it)->ab[1]->rep->nbr[TOP]->type==INDUCTANCE)){
-              p = (*it)->ab[1]->rep; q = (*it)->ab[0]->rep;
-           }
+           // node p points to Y node
+           if(na->isS()==Y){
+		bool flag = false;
+		for(size_t i=0;i<na->nbr_vec.size();i++){
+			Net *nbr_net = na->nbr_vec[i];
+			if(nbr_net->type == INDUCTANCE){
+				flag = true;
+				break;
+			}
+		}
+		if(flag == true){
+			p = na; q = nb;
+		}
+	   } 
+           else if(nb->isS()==Y){
+		bool flag = false;
+		for(size_t i=0;i<nb->nbr_vec.size();i++){
+			Net *nbr_net = nb->nbr_vec[i];
+			if(nbr_net->type == INDUCTANCE){
+				flag = true;
+				break;
+			}
+		}
+		if(flag == true){
+			p = nb; q = na;
+		}
+	   }
 
-           r = p->nbr[TOP]->ab[0]->rep;
-           if(r->isS()!=Y) 
-              r = p->nbr[TOP]->ab[1]->rep;
 	   /*if(my_id==0){
 		   clog<<"modify rhs net: "<<*(*it)<<endl;
 		   clog<<"p, q and r: "<<*p<<" "<<*q<<" "<<*r<<endl;
@@ -468,7 +500,7 @@ void Block::make_A_symmetric(double *b, int &my_id){
            size_t id = nd_IdMap[q];// q->rid;
            double G = 1.0 / (*it)->value;
            
-           b[id] += r->value * G;
+           b[id] += p->value * G;
 	   // if(my_id==0)
 		   // clog<<"id, new b: "<<id<<" "<<b[id]<<endl;
         }

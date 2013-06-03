@@ -224,6 +224,14 @@ void Parser::update_node(Net * net){
 	// BOTTOM for via / XVDD
 	// ground node for CURRENT
 	Node *a=net->ab[0], *b=net->ab[1];
+	// assign isS() == Y
+	if(net->type == VOLTAGE){
+		if(a->is_ground())
+			b->flag== 1;
+		else
+			a->flag = 1;
+	}
+
 	if(a->is_ground())
 		b->nbr_vec.push_back(net);
 	else if(b->is_ground())
@@ -233,81 +241,7 @@ void Parser::update_node(Net * net){
 		b->nbr_vec.push_back(net);
 	}
 	return;
-	//cout<<"setting "<<net->name<<" nd1="<<nd1->name<<" nd2="<<nd2->name<<endl;
-	if(net->type == CAPACITANCE){
-		// make sure a is the Z node, b is ground
-		if(a->isS() != Z) swap<Node*>(a,b);
-		// only needs single dir nbr net for index
-		// TOP for resistance
-		// BOTTOM for capacitance
-		a->set_nbr(BOTTOM, net);
-	}
-	else if(net->type == INDUCTANCE){
-		// a is Y, b is X
-		if(a->isS()== X) swap<Node*>(a,b);
-		a->set_nbr(BOTTOM, net);
-		b->set_nbr(TOP, net);
-	}
-	// resistance type net with special nodes
-	else if(net->type == RESISTOR && a->isS()!= -1 
-		&& b->isS() == -1){
-		if(a->isS()== X){
-			a->set_nbr(BOTTOM, net);
-			b->set_nbr(TOP, net);
-		}
-		else if(a->isS() == Z){
-			// bottom for z node has been taken by 
-			// current
-			a->set_nbr(TOP, net);
-		}
-	}
-	else if(net->type == RESISTOR && b->isS()!= -1 && a->isS() ==-1){
-		if(b->isS()== X){
-			b->set_nbr(BOTTOM, net);
-			a->set_nbr(TOP, net);
-		}
-		else if(b->isS() == Z){
-			b->set_nbr(TOP, net);
-		}
-	}
-	else if( a->pt_vec[0].z == b->pt.z && a->pt != b->pt ){
-		// horizontal or vertical resistor in the same layer
-		if( a->pt.y == b->pt.y ){// horizontal
-			if(a->pt.x > b->pt.x) swap<Node*>(a,b);
-			a->set_nbr(EAST, net);
-			b->set_nbr(WEST, net);
-		}
-		else if( a->pt.x == b->pt.x ){// vertical
-			if(a->pt.y > b->pt.y) swap<Node*>(a,b);
-			a->set_nbr(NORTH, net);
-			b->set_nbr(SOUTH, net);
-		}
-		// diagonal net
-		else{
-			diag_net_set.push_back(net);
-			// report_exit("Diagonal net\n");
-		}
-	}
-	else if( //fzero(net->value) && 
-		 !a->is_ground() &&
-		 !b->is_ground() ){// this is Via (Voltage or Resistor )
-		if( a->pt.z > b->pt.z ) swap<Node*>(a,b);
-		a->set_nbr(TOP, net);
-		b->set_nbr(BOTTOM, net);
-	}
-	else if (net->type == VOLTAGE){// Vdd Voltage
-		// one is X node, one is ground node
-		// Let a be X node, b be another
-		if( a->is_ground() ) swap<Node*>(a,b);
-		a->flag = Y;		// set a to be X node
-		a->set_nbr(TOP, net);	// X -- VDD -- Ground
-		a->set_value(net->value);
-	}
-	else{// if( net->type == CURRENT ){// current source
-		// let a be ground node
-		if( !a->is_ground() ) swap<Node*>(a,b);
-		b->set_nbr(BOTTOM, net);
-	}
+	//cout<<"setting "<<net->name<<" nd1="<<nd1->name<<" nd2="<<nd2->name<<endl;	
 }
 
 // parse the file and create circuits
@@ -578,14 +512,14 @@ int Parser::extract_ckt_name(int &my_id,
 				extract_node(sb, nd[1]);
 
 			for(i=0;i<2;i++){
-				if(nd[i].pt.x > x_max) 
-					x_max = nd[i].pt.x;
-				if(nd[i].pt.x >0 && nd[i].pt.x <x_min)
-					x_min = nd[i].pt.x;
-				if(nd[i].pt.y > y_max)
-					y_max = nd[i].pt.y;
-				if(nd[i].pt.y>0 && nd[i].pt.y <y_min)
-					y_min = nd[i].pt.y;
+				if(nd[i].pt_vec[0].x > x_max) 
+					x_max = nd[i].pt_vec[0].x;
+				if(nd[i].pt_vec[0].x >0 && nd[i].pt_vec[0].x <x_min)
+					x_min = nd[i].pt_vec[0].x;
+				if(nd[i].pt_vec[0].y > y_max)
+					y_max = nd[i].pt_vec[0].y;
+				if(nd[i].pt_vec[0].y>0 && nd[i].pt_vec[0].y <y_min)
+					y_min = nd[i].pt_vec[0].y;
 			}
 		}else if(line[0] == '.'){
 			// parse_dot by core 0
@@ -693,9 +627,15 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 			// clog<<line<<endl;
 			sscanf(line, "%s %s %s %lf", 
 					sname, sa, sb, &value);
-			if( sa[0] == '0' ){ nd[0].pt.set(-1,-1,-1); }
+			if( sa[0] == '0' ){ 
+				Point pt;
+				pt.set(-1,-1,-1);
+				nd[0].pt_vec.push_back(pt); }
 			else extract_node(sa, nd[0]);
-			if( sb[0] == '0' ){ nd[1].pt.set(-1,-1,-1); }
+			if( sb[0] == '0' ){ 
+				Point pt;
+				pt.set(-1,-1,-1);
+				nd[1].pt_vec.push_back(pt); }
 			else	extract_node(sb, nd[1]);
 		
 			for(int i=0;i<num_blocks;i++){
@@ -752,36 +692,36 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 }
 
 int Parser::cpr_nd_block(Node &nd, float *geo, int &bid){
-	if(nd.pt.size()==0)
+	if(nd.pt_vec.size()==0)
 		return 0;
-	if(nd.pt[0].x >= geo[4*bid] &&
-	   nd.pt[0].x <= geo[4*bid+2] &&
-	   nd.pt[0].y >= geo[4*bid+1] &&
-	   nd.pt[0].y <= geo[4*bid+3]){
+	if(nd.pt_vec[0].x >= geo[4*bid] &&
+	   nd.pt_vec[0].x <= geo[4*bid+2] &&
+	   nd.pt_vec[0].y >= geo[4*bid+1] &&
+	   nd.pt_vec[0].y <= geo[4*bid+3]){
 		return 1;
 	}
 	else return 0;
 }
 
 int Parser::cpr_nd_block(Node *nd, float *geo, int &bid){
-	if(nd->pt.size()==0)
+	if(nd->pt_vec.size()==0)
 		return 0;
-	if(nd->pt[0].x >= geo[0] &&
-	   nd->pt[0].x <= geo[2] &&
-	   nd->pt[0].y >= geo[1] &&
-	   nd->pt[0].y <= geo[3]){
+	if(nd->pt_vec[0].x >= geo[0] &&
+	   nd->pt_vec[0].x <= geo[2] &&
+	   nd->pt_vec[0].y >= geo[1] &&
+	   nd->pt_vec[0].y <= geo[3]){
 		return 1;
 	}
 	else return 0;
 }
 
 int Parser::cpr_nd_block(Node *nd, float &lx, float &ly, float &ux, float &uy){
-	if(nd->pt.size()==0)
+	if(nd->pt_vec.size()==0)
 		return 0;
-	if(nd->pt[0].x >= lx&&
-	   nd->pt[0].x <= ux &&
-	   nd->pt[0].y >= ly &&
-	   nd->pt[0].y <= uy){
+	if(nd->pt_vec[0].x >= lx&&
+	   nd->pt_vec[0].x <= ux &&
+	   nd->pt_vec[0].y >= ly &&
+	   nd->pt_vec[0].y <= uy){
 		return 1;
 	}
 	else {

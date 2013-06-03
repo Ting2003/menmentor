@@ -169,20 +169,20 @@ bool compare_node_ptr(const Node * a, const Node * b){
 	if( a->is_ground() ) return false;
 	if (b->is_ground() ) return true;
 
-	if( a->pt.y == b->pt.y ){
-		if( a->pt.x == b->pt.x ){
-			if( a->pt.z == b->pt.z ){
+	if( a->pt_vec[0].y == b->pt_vec[0].y ){
+		if( a->pt_vec[0].x == b->pt_vec[0].x ){
+			if( a->pt_vec[0].z == b->pt_vec[0].z ){
 				return (a->isS() > b->isS());
 			}
 			else{
-				return (a->pt.z > b->pt.z);// top down
+				return (a->pt_vec[0].z > b->pt_vec[0].z);// top down
 			}
 		}
 		else
-			return ( a->pt.x < b->pt.x );
+			return ( a->pt_vec[0].x < b->pt_vec[0].x );
 	}
 	else
-		return (a->pt.y < b->pt.y);
+		return (a->pt_vec[0].y < b->pt_vec[0].y);
 }
 #endif
 // sort the nodes according to their coordinate 
@@ -311,7 +311,14 @@ void Circuit::solve_init(int &my_id){
 		// clog<<"total num_nodes: "<<nodelist.size()<<endl;
 	sort_bd_nodes(my_id);
 	sort_internal_nodes(my_id);
-	
+
+	// assign VDD value of circuit
+	int type = VOLTAGE;
+	NetList & ns = net_set[type];
+	for(size_t i=0;i<ns.size();i++){
+		VDD = ns[i]->value;
+		break;		
+	}
 	/*if(my_id==3){
 		clog<<"sw: "<<internal_nodelist_sw<<endl;
 		clog<<"s: "<<internal_nodelist_s<<endl;
@@ -341,19 +348,7 @@ void Circuit::solve_init(int &my_id){
 	size_t i=0;
 	for(i=0, nr=0;i<size;i++){
 		p=nodelist[i];
-
-		// test if it can be merged
-		/*if( p->is_mergeable() ){
-			mergelist.push_back(p);
-			continue;
-		}*/
-		
-		Net * net = p->nbr[TOP];
-		//merge_node(p);
-		
-		// find the VDD value
-		if( p->isS()==Y ) VDD = p->get_value();
-		
+		/*Net * net = p->nbr[TOP];	
 		// test short circuit
 		if( p->isS() !=Y && // Y must be representative 
 		    net != NULL &&
@@ -362,7 +357,7 @@ void Circuit::solve_init(int &my_id){
 			assert( net->ab[1] != p );
 			p->rep = net->ab[1]->rep;
 		} // else the representative is itself
-
+		*/
 		// push the representatives into list
 		if( p->rep == p ) {
 			replist.push_back(p);
@@ -383,13 +378,10 @@ void Circuit::solve_init(int &my_id){
 	// if(nr >=0)
 		// block_info.count = nr;
 
-	size_t n_merge = mergelist.size();
 	size_t n_nodes = nodelist.size();
 	size_t n_reps  = replist.size();
-	double ratio = n_merge / (double) (n_merge + n_reps);
 	
-	/*clog<<"mergeable  "<<n_merge<<endl;
-	clog<<"replist    "<<n_reps <<endl;
+	/*clog<<"replist    "<<n_reps <<endl;
 	clog<<"nodelist   "<<n_nodes<<endl;
 	clog<<"ratio =    "<<ratio  <<endl;*/
 
@@ -413,7 +405,7 @@ void Circuit::block_init(int &my_id, MPI_CLASS &mpi_class){
 		block_vec[i]->stamp_matrix(my_id, mpi_class);
 	}
 }
-#if DEBUG
+#if 0
 // stamp the nets by sets, block version
 // *NOTE* at the same time insert the net into boundary netlist
 void Circuit::stamp_block_matrix(int &my_id, Matrix &A, MPI_CLASS &mpi_class){
@@ -480,7 +472,7 @@ void Circuit::stamp_block_matrix(int &my_id, Matrix &A, MPI_CLASS &mpi_class){
 	//if(my_id==0)
 		//clog<<"after CK_decomp. "<<endl;
 }
-#endif
+
 // stamp the nets by sets, block version
 // *NOTE* at the same time insert the net into boundary netlist
 void Circuit::stamp_block_matrix_tr(int &my_id, Matrix &A, MPI_CLASS &mpi_class, Tran &tran){	
@@ -533,7 +525,7 @@ void Circuit::solve(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran)
 	solve_IT(my_id, num_procs, mpi_class, tran);
 	//clog<<my_id<<" finish solve: "<<endl;
 }
-
+#endif
 // solve Circuit
 bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran){
 	double time=0;
@@ -947,7 +939,7 @@ void Circuit::get_voltages_from_LU_sol(double * x){
 	}
 #endif
 }
-
+#if 0
 // compute value of mergelist nodes
 void Circuit::get_vol_mergelist(){
 	DIRECTION p, q;
@@ -983,6 +975,7 @@ void Circuit::get_vol_mergelist(){
 		//clog<<" node "<<*node<<endl;
 	}
 }
+#endif
 
 // copy solution of block into circuit
 void Circuit::get_voltages_from_block_LU_sol(){
@@ -1022,7 +1015,7 @@ void Circuit:: release_ckt_nodes(Tran &tran){
    }
 }
 
-
+#if 0
 void Circuit::make_A_symmetric(double *b, int &my_id){
 	int type = RESISTOR;
 	NetList & ns = net_set[type];
@@ -1524,6 +1517,7 @@ void Circuit::stamp_inductance_tr(Matrix & A, Net * net, Tran &tran, int &my_id)
 		}
 	}
 }
+#endif
 
 void Circuit::get_parameters(
 		double & epsilon,
@@ -1605,46 +1599,6 @@ bool Circuit::check_diverge() const{
 			if(x<0.0) return true;
 	}
 	return false;
-}
-
-Node * Circuit::merge_along_dir_one_pass(Node * start, DIRECTION dir, bool remove){
-	double sum = 0.0;
-	DIRECTION ops = get_opposite_dir(dir);
-	Node * p = start;
-
-	// traverse along the direction, sum the resistor value and set the node end
-	while(1){
-		p = p->get_nbr_node(dir);
-		p->end[ops] = start;
-		Net * net = p->nbr[ops];
-		sum += net->value;
-		p->eqvr[ops] = sum;
-		if( remove ) {
-			size_t id = net_id[net];
-			net_set[RESISTOR][id] = NULL;
-			delete net;
-		}
-		if( !p->is_mergeable() ) break;
-	}
-
-	return p;	// return end point
-}
-
-// merge a line along direction
-void Circuit::merge_along_dir(Node * node, DIRECTION dir){
-	// two pass traversal
-	DIRECTION ops = get_opposite_dir(dir);
-	node->end[dir] = merge_along_dir_one_pass(node, dir, false);
-	Node * other = node->end[dir];
-	other->end[ops] = node;
-	merge_along_dir_one_pass(other, ops, true);
-	//assert( ret == node );
-
-	// add a new net between `node' and its end
-	Net * net = new Net(RESISTOR, node->eqvr[dir], node, other);
-	node->nbr[dir] = other->nbr[ops] = net;
-	//clog<<"newly added net: "<<*net<<endl;
-	this->add_net(net);
 }
 
 void Circuit::boundary_init(int &my_id, int &num_procs){
@@ -2247,6 +2201,7 @@ void Circuit::current_tr(Net *net, double &time){
 	//return current;
 }
 
+#if 0
 // add Ieq into rhs
 // Ieq = i(t) + 2*C / delta_t *v(t)
 void Circuit::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
@@ -2374,6 +2329,7 @@ void Circuit::modify_rhs_c_tr(Net *net, double * rhs, double *x){
 		 rhs[l] -= Ieq; 
 	}
 }
+#endif
 
 void Circuit::set_eq_induc(Tran &tran){
 	NetPtrVector &ns = net_set[INDUCTANCE];
