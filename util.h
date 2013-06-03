@@ -25,7 +25,6 @@ string get_basename(char * filename);
 void open_logfile(const char * logname);
 void close_logfile();
 
-DIRECTION get_opposite_dir(DIRECTION dir);
 
 // given a vector, copy its element to a basic array
 template<class T>

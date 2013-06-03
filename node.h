@@ -19,16 +19,16 @@ public:
 	// member functions
 	Node();
 	~Node();
-	Node(string name, Point _pt, int flag=-1, double v=0.0);
+	Node(string name, int flag=-1, double v=0.0);
 	Node(const Node & nd);
 	Node & operator = (const Node & nd);
-	void set_nbr(DIRECTION dir, Net * name);
-	Net * get_nbr_net(DIRECTION dir) const;
+	//void set_nbr(DIRECTION dir, Net * name);
+	//Net * get_nbr_net(DIRECTION dir) const;
 
 	// Ting: get_nbr_node
-	Node * get_nbr_node(Node *node, DIRECTION dir) const;
-	Node get_nbr_node(Node node, DIRECTION dir) const;
-	Node * get_nbr_node(DIRECTION dir) const;
+	//Node * get_nbr_node(Node *node, DIRECTION dir) const;
+	//Node get_nbr_node(Node node, DIRECTION dir) const;
+	//Node * get_nbr_node(DIRECTION dir) const;
 
 	//int get_layer() const;
 
@@ -48,11 +48,12 @@ public:
 	////////////////////////////////////////////////////////////
 	// member variables
 	string name;		// node name
-	Point pt;		// coordinate
+	vector<Point> pt_vec;		// coordinate
 	// only 2 possible cases:
 	// {TOP, BOTTOM, EAST, WEST}
 	// {TOP, BOTTOM, NORTH, SOUTH}
-	Net * nbr[6];		// neighboring nets
+	// Net * nbr[6];		// neighboring nets
+	vector<Net *> nbr_vec;
 
 	long rid;		// id in rep_list
 	// to record whether this node is
@@ -81,7 +82,7 @@ inline int Node::isS() const{return flag;}
 
 //inline bool Node::is_ground() const{return name == "0";}
 // use a tricky way to speed up
-inline bool Node::is_ground() const{return pt.x<0;}
+inline bool Node::is_ground() const{return name == "0";}
 
 //inline int Node::get_layer() const{ return pt.z; }
 
@@ -89,9 +90,9 @@ inline double Node::get_value() const{return value;}
 
 inline void Node::set_value(double v){value = v;}
 
-inline void Node::set_nbr(DIRECTION dir, Net * net){ nbr[dir] = net; }
+//inline void Node::set_nbr(DIRECTION dir, Net * net){ nbr[dir] = net; }
 
-inline Node * Node::get_nbr_node(DIRECTION dir) const{
+/*inline Node * Node::get_nbr_node(DIRECTION dir) const{
 	if( nbr[dir] == NULL ) return NULL;
 	Node * nbr_node = nbr[dir]->ab[0];
 	return (nbr_node != this? nbr_node: nbr[dir]->ab[1]);
@@ -99,7 +100,7 @@ inline Node * Node::get_nbr_node(DIRECTION dir) const{
 
 inline Net * Node::get_nbr_net(DIRECTION dir) const{
 	return nbr[dir];
-}
+}*/
 
 /*inline bool Node::is_mergeable() const{
 	if(internal_bd ==1) return 0;
@@ -112,7 +113,7 @@ inline Net * Node::get_nbr_net(DIRECTION dir) const{
 	      (nbr[SOUTH] != NULL && nbr[SOUTH]->flag_bd==0)&&
 	       nbr[EAST]  == NULL && nbr[WEST] == NULL));
 }*/
-
+#if 0
 inline bool Node::is_mergeable() const{
 	return nbr[TOP] == NULL && nbr[BOTTOM] == NULL &&
 	(((nbr[EAST]  != NULL
@@ -122,6 +123,7 @@ inline bool Node::is_mergeable() const{
 	      nbr[SOUTH] != NULL)&&
 	       (nbr[EAST]  == NULL && nbr[WEST] == NULL)));
 }
+#endif
 
 
 #endif

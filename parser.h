@@ -105,7 +105,7 @@ private:
 };
 
 // Trick: try to modify the net
-inline void Parser::try_change_via(Net * net){
+/*inline void Parser::try_change_via(Net * net){
 	// is it a via?
 	// if( net->ab[0]->get_layer() == net->ab[1]->get_layer() )
 
@@ -117,6 +117,6 @@ inline void Parser::try_change_via(Net * net){
 		net->type = VOLTAGE;
 		net->value = 0.0;
 	}
-}
+}*/
 
 #endif

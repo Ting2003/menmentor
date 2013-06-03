@@ -25,15 +25,15 @@ Parser::Parser(vector<Circuit*> * ckts):p_ckts(ckts){
 
 Parser::~Parser(){ }
 
-// _X_n2_19505_20721 
-// X:
-// n2: layer 2
-// 19505 20721: coordinate
+// node234_2_3_4 
+// name_z_x_y
 void Parser::extract_node(char * str, Node & nd){
 	//static Node gnd(string("0"), Point(-1,-1,-1));
 	if( str[0] == '0' ) {
 		nd.name="0";
-		nd.pt.set(-1,-1,-1);
+		Point pt;
+		pt.set(-1,-1,-1);
+		nd.pt_vec.push_back(pt);
 		return;
 	}
 
@@ -43,8 +43,13 @@ void Parser::extract_node(char * str, Node & nd){
 	char * saveptr;
 	char l[MAX_BUF];
 	strcpy(l, str);
-	const char * sep = "_n";
-	chs = strtok_r(l, sep, &saveptr); // initialize
+	const char * sep = "_";
+
+	// node name
+	chs = strtok_r(l, sep, &saveptr);
+	string node_name;
+	node_name.append(chs);
+	
 	// for transient, 'Y' is the VDD source node
 	if( chs[0] == 'X' || chs[0]== 'Y' || chs[0]== 'Z' ){
 		flag = chs[0]-'X';
@@ -57,8 +62,10 @@ void Parser::extract_node(char * str, Node & nd){
 	chs = strtok_r(NULL, sep, &saveptr);
 	y = atol(chs);
 	
-	nd.name.assign(str);
-	nd.pt.set(x,y,z);
+	nd.name.assign(node_name);
+	Point pt;
+	pt.set(x,y,z);
+	nd.pt_vec.push_back(pt);
 	nd.flag = flag;
 	nd.rid = -1;
 }
@@ -121,8 +128,8 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 
 	// if there is a cap with it, need to modify
 	if((line[0]=='r' || line[0] =='R') && 
-		!(nd[0].pt.x == nd[1].pt.x && 
-		nd[0].pt.y == nd[1].pt.y)){
+		!(nd[0].pt_vec[0].x == nd[1].pt_vec[0].x && 
+		nd[0].pt_vec[0].y == nd[1].pt_vec[0].y)){
 		// add node into bd and internal vector
 		add_node_inter(nd_ptr[0], nd_ptr[1], 
 			mpi_class, ckt, my_id);
@@ -194,7 +201,7 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	// trick: when the value of a resistor via is below a threshold,
 	// treat it as a 0-voltage via
 	//if( Circuit::MODE == (int)IT ) {
-		try_change_via(net);
+		// try_change_via(net);
 	//}
 
 	// insert this net into circuit
@@ -206,8 +213,7 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	update_node(net);
 }
 
-// Given a net with its two nodes, update the connection information
-// for thet two nodes
+// Given a net with its two nodes, update the connection information for thet two nodes
 void Parser::update_node(Net * net){
 	// first identify their connection type:
 	// 1. horizontal/vertical   2. via/VDD 3. current
@@ -218,6 +224,15 @@ void Parser::update_node(Net * net){
 	// BOTTOM for via / XVDD
 	// ground node for CURRENT
 	Node *a=net->ab[0], *b=net->ab[1];
+	if(a->is_ground())
+		b->nbr_vec.push_back(net);
+	else if(b->is_ground())
+		a->nbr_vec.push_back(net);
+	else {
+		a->nbr_vec.push_back(net);
+		b->nbr_vec.push_back(net);
+	}
+	return;
 	//cout<<"setting "<<net->name<<" nd1="<<nd1->name<<" nd2="<<nd2->name<<endl;
 	if(net->type == CAPACITANCE){
 		// make sure a is the Z node, b is ground
@@ -255,7 +270,7 @@ void Parser::update_node(Net * net){
 			b->set_nbr(TOP, net);
 		}
 	}
-	else if( a->pt.z == b->pt.z && a->pt != b->pt ){
+	else if( a->pt_vec[0].z == b->pt.z && a->pt != b->pt ){
 		// horizontal or vertical resistor in the same layer
 		if( a->pt.y == b->pt.y ){// horizontal
 			if(a->pt.x > b->pt.x) swap<Node*>(a,b);
@@ -455,13 +470,7 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 				report_exit(line);
 				break;
 		}
-	}
-	clog<<"diagonal net size: "<<diag_net_set.size()<<endl;
-	for(size_t i=0; i < diag_net_set.size();i++){
-		Net *net = diag_net_set[i];
-		bool flag_map = map_res_net(net);
-		clog<<"diagonal net: "<<*net<< " mapped: "<< flag_map<< endl;
-	}
+	}	
 
 	fclose(f);
 	// release map_node resource
@@ -743,30 +752,36 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 }
 
 int Parser::cpr_nd_block(Node &nd, float *geo, int &bid){
-	if(nd.pt.x >= geo[4*bid] &&
-	   nd.pt.x <= geo[4*bid+2] &&
-	   nd.pt.y >= geo[4*bid+1] &&
-	   nd.pt.y <= geo[4*bid+3]){
+	if(nd.pt.size()==0)
+		return 0;
+	if(nd.pt[0].x >= geo[4*bid] &&
+	   nd.pt[0].x <= geo[4*bid+2] &&
+	   nd.pt[0].y >= geo[4*bid+1] &&
+	   nd.pt[0].y <= geo[4*bid+3]){
 		return 1;
 	}
 	else return 0;
 }
 
 int Parser::cpr_nd_block(Node *nd, float *geo, int &bid){
-	if(nd->pt.x >= geo[0] &&
-	   nd->pt.x <= geo[2] &&
-	   nd->pt.y >= geo[1] &&
-	   nd->pt.y <= geo[3]){
+	if(nd->pt.size()==0)
+		return 0;
+	if(nd->pt[0].x >= geo[0] &&
+	   nd->pt[0].x <= geo[2] &&
+	   nd->pt[0].y >= geo[1] &&
+	   nd->pt[0].y <= geo[3]){
 		return 1;
 	}
 	else return 0;
 }
 
 int Parser::cpr_nd_block(Node *nd, float &lx, float &ly, float &ux, float &uy){
-	if(nd->pt.x >= lx&&
-	   nd->pt.x <= ux &&
-	   nd->pt.y >= ly &&
-	   nd->pt.y <= uy){
+	if(nd->pt.size()==0)
+		return 0;
+	if(nd->pt[0].x >= lx&&
+	   nd->pt[0].x <= ux &&
+	   nd->pt[0].y >= ly &&
+	   nd->pt[0].y <= uy){
 		return 1;
 	}
 	else {
@@ -1017,7 +1032,7 @@ void Parser::write_print(Tran &tran, vector<FILE *> &of, MPI_CLASS &mpi_class, c
 	}
 	name_vec.clear();
 }
-
+#if 0
 // only fit for the same layer net
 // map net into horizontal or vertical dir
 bool Parser::map_res_net(Net*net){
@@ -1112,3 +1127,4 @@ bool Parser::map_net_x(Net *net){
 
 	}
 }
+#endif

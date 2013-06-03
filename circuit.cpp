@@ -54,7 +54,7 @@ Circuit::Circuit(string _name):name(_name),
 	x_min(INFTY),y_min(INFTY),x_max(0),y_max(0),
 	circuit_type(UNKNOWN), VDD(0.0){
 	// add ground node
-	Node * gnd = new Node(string("0"), Point(-1,-1,-1));
+	Node * gnd = new Node(string("0"));
 	gnd->rep = gnd;
 	this->add_node(gnd);
 

@@ -4,9 +4,10 @@
 using namespace std;
 
 // empty constructor
-Node::Node():name(""),pt(Point(-1,-1,-1)), rid(0),
+Node::Node():name(""),rid(0),
 	value(0.0), flag(-1), rep(NULL){
-	for(int i=0;i<6;i++) this->nbr[i] = NULL;
+	pt_vec.clear();
+	nbr_vec.clear();
 	for(int i=0;i<4;i++){
 		eqvr[i]=0.0;
 		end[i]=this;
@@ -14,20 +15,21 @@ Node::Node():name(""),pt(Point(-1,-1,-1)), rid(0),
 	rid = -1;
 	flag_bd = 0;
 	internal_bd = 0;
-	ckt_name = "";
 }
 
 Node::~Node (){
+	pt_vec.clear();
+	nbr_vec.clear();
 	delete [] rep;
 	delete [] end;
 	delete [] eqvr;
-	delete [] nbr;
 }
 
-Node::Node(string n, Point _pt, int x, double v): 
-	name(n), pt(_pt), rid(0), 
+Node::Node(string n, int x, double v): 
+	name(n), rid(0), 
 	value(v), flag(x), rep(NULL) {
-	for(int i=0;i<6;i++) this->nbr[i] = NULL;
+	pt_vec.clear();
+	nbr_vec.clear();
 	for(int i=0;i<4;i++){
 		eqvr[i]=0.0;
 		end[i]=this;
@@ -35,38 +37,36 @@ Node::Node(string n, Point _pt, int x, double v):
 	rid = -1;
 	flag_bd = 0;
 	internal_bd = 0;
-	ckt_name = "";
 }
 
 Node::Node(const Node & nd){
 	name = nd.name;
-	pt = nd.pt;
+	pt_vec = nd.pt_vec;
 	rid = nd.rid;
 	value = nd.value;
 	flag = nd.flag;
 	//rep = nd.rep;
 	rep = NULL;
-	for(int i=0;i<6;i++) this->nbr[i] = nd.nbr[i];
+	nbr_vec.clear();
 	for(int i=0;i<4;i++){
 		eqvr[i]=0.0;
 		end[i]=this;
 	}
 	flag_bd = nd.flag_bd;
 	internal_bd = nd.internal_bd;
-	ckt_name = nd.ckt_name;
 }
 
 Node & Node::operator = (const Node & nd){
 	(*this) = Node(nd);
 	return *this;
 }
-
+#if 0
 // Ting
 // get node's nbr from dir direction
 // template<class T>
 Node * Node::get_nbr_node(Node *node, DIRECTION dir) const{
 	Node * node_nbr =node->nbr[dir]->ab[0];
-	if(node_nbr->pt == node->pt){
+	if(node_nbr->name == node->name){
 		node_nbr = node->nbr[dir]->ab[1];
 	}
 	return node_nbr;	
@@ -77,11 +77,12 @@ Node * Node::get_nbr_node(Node *node, DIRECTION dir) const{
 // template<class T>
 Node Node::get_nbr_node(Node node, DIRECTION dir) const{
 	Node node_nbr = *node.nbr[dir]->ab[0];
-	if(node_nbr.pt == node.pt){
+	if(node_nbr.name == node.name){
 		node_nbr = *node.nbr[dir]->ab[1];
 	}
 	return node_nbr;
 }
+#endif
 
 ostream & operator << (ostream & os, const Node & node){
 	//os<<node.name<<node.pt<<"="<<scientific<<node.value;

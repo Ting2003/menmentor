@@ -337,9 +337,9 @@ private:
 
 	bool check_diverge() const;
 
-	void merge_along_dir(Node *, DIRECTION dir);
-	Node * merge_along_dir_one_pass(Node *, DIRECTION dir, bool remove);
-	void merge_node(Node * node);
+	/*void merge_along_dir(Node *, DIRECTION dir);
+	Node * merge_along_dir_one_pass(Node *, DIRECTION dir, bool remove);*/
+	//void merge_node(Node * node);
 
 	vector<Node_TR_PRINT> ckt_nodes;
 	// ************** member variables *******************
@@ -459,7 +459,7 @@ inline Node * Circuit::get_node(string name){
 	if( it != map_node.end() ) return it->second;
 	else return NULL;
 }
-
+/*
 inline void Circuit::merge_node(Node * node){
 	for(DIRECTION dir = WEST; dir <= NORTH; dir=DIRECTION(dir+1)){
 		// test whether this line has been processed
@@ -473,7 +473,7 @@ inline void Circuit::merge_node(Node * node){
 		}
 		merge_along_dir(node, dir);
 	}
-}
+}*/
 
 /*
 // find a net by name
