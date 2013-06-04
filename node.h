@@ -48,7 +48,7 @@ public:
 	////////////////////////////////////////////////////////////
 	// member variables
 	string name;		// node name
-	vector<Point*> pt_vec;		// coordinate
+	Point pt;		// coordinate
 	// only 2 possible cases:
 	// {TOP, BOTTOM, EAST, WEST}
 	// {TOP, BOTTOM, NORTH, SOUTH}

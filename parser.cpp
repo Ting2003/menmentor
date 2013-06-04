@@ -31,9 +31,7 @@ void Parser::extract_node(char * str, Node & nd){
 	//static Node gnd(string("0"), Point(-1,-1,-1));
 	if( str[0] == '0' ) {
 		nd.name="0";
-		Point *pt = new Point(-1,-1,-1);
-		if(nd.pt_vec.size()==0)
-			nd.pt_vec.push_back(pt);
+		nd.pt.set(-1,-1,-1);
 		return;
 	}
 
@@ -56,8 +54,6 @@ void Parser::extract_node(char * str, Node & nd){
 		chs = strtok_r(NULL, sep, &saveptr);
 	}*/
 
-	if(node_name != nd.name)
-		nd.pt_vec.resize(0);	
 	chs = strtok_r(NULL, sep, &saveptr);
 	z = atol(chs);
 	chs = strtok_r(NULL, sep, &saveptr);
@@ -65,9 +61,7 @@ void Parser::extract_node(char * str, Node & nd){
 	chs = strtok_r(NULL, sep, &saveptr);
 	y = atol(chs);
 	nd.name.assign(node_name);
-	Point *pt = new Point(x, y, z);
-	nd.pt_vec.push_back(pt);
-
+	nd.pt.set(x, y, z);
 	nd.flag = flag;
 	nd.rid = -1;
 }
@@ -131,8 +125,8 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 
 	// if there is a cap with it, need to modify
 	if((line[0]=='r' || line[0] =='R') && 
-		!(nd[0].pt_vec[0]->x == nd[1].pt_vec[0]->x && 
-		nd[0].pt_vec[0]->y == nd[1].pt_vec[0]->y)){
+		!(nd[0].pt.x == nd[1].pt.x && 
+		nd[0].pt.y == nd[1].pt.y)){
 		// add node into bd and internal vector
 		add_node_inter(nd_ptr[0], nd_ptr[1], 
 			mpi_class, ckt, my_id);
@@ -515,14 +509,14 @@ int Parser::extract_ckt_name(int &my_id,
 			//if( sb[0] != '0' ) 
 				extract_node(sb, nd[1]);
 			for(i=0;i<2;i++){
-				if(nd[i].pt_vec[0]->x > x_max) 
-					x_max = nd[i].pt_vec[0]->x;
-				if(nd[i].pt_vec[0]->x >0 && nd[i].pt_vec[0]->x <x_min)
-					x_min = nd[i].pt_vec[0]->x;
-				if(nd[i].pt_vec[0]->y > y_max)
-					y_max = nd[i].pt_vec[0]->y;
-				if(nd[i].pt_vec[0]->y>0 && nd[i].pt_vec[0]->y <y_min)
-					y_min = nd[i].pt_vec[0]->y;
+				if(nd[i].pt.x > x_max) 
+					x_max = nd[i].pt.x;
+				if(nd[i].pt.x>0 && nd[i].pt.x <x_min)
+					x_min = nd[i].pt.x;
+				if(nd[i].pt.y > y_max)
+					y_max = nd[i].pt.y;
+				if(nd[i].pt.y>0 && nd[i].pt.y <y_min)
+					y_min = nd[i].pt.y;
 			}
 		}else if(line[0] == '.'){
 			// parse_dot by core 0
@@ -631,13 +625,11 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 			// clog<<line<<endl;
 			sscanf(line, "%s %s %s %lf", 
 					sname, sa, sb, &value);
-			if( sa[0] == '0' ){ 
-				Point *pt = new Point(-1,-1,-1);
-				nd[0].pt_vec.push_back(pt); }
+			if( sa[0] == '0' )
+				nd[0].pt.set(-1,-1,-1); 
 			else extract_node(sa, nd[0]);
-			if( sb[0] == '0' ){ 
-				Point *pt = new Point(-1,-1,-1);
-				nd[1].pt_vec.push_back(pt); }
+			if( sb[0] == '0' )
+				nd[1].pt.set(-1,-1,-1); 
 			else	extract_node(sb, nd[1]);
 		
 			for(int i=0;i<num_blocks;i++){
@@ -693,36 +685,30 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 }
 
 int Parser::cpr_nd_block(Node &nd, float *geo, int &bid){
-	if(nd.pt_vec.size()==0)
-		return 0;
-	if(nd.pt_vec[0]->x >= geo[4*bid] &&
-	   nd.pt_vec[0]->x <= geo[4*bid+2] &&
-	   nd.pt_vec[0]->y >= geo[4*bid+1] &&
-	   nd.pt_vec[0]->y <= geo[4*bid+3]){
+	if(nd.pt.x >= geo[4*bid] &&
+	   nd.pt.x <= geo[4*bid+2] &&
+	   nd.pt.y >= geo[4*bid+1] &&
+	   nd.pt.y <= geo[4*bid+3]){
 		return 1;
 	}
 	else return 0;
 }
 
 int Parser::cpr_nd_block(Node *nd, float *geo, int &bid){
-	if(nd->pt_vec.size()==0)
-		return 0;
-	if(nd->pt_vec[0]->x >= geo[0] &&
-	   nd->pt_vec[0]->x <= geo[2] &&
-	   nd->pt_vec[0]->y >= geo[1] &&
-	   nd->pt_vec[0]->y <= geo[3]){
+	if(nd->pt.x >= geo[0] &&
+	   nd->pt.x <= geo[2] &&
+	   nd->pt.y >= geo[1] &&
+	   nd->pt.y <= geo[3]){
 		return 1;
 	}
 	else return 0;
 }
 
 int Parser::cpr_nd_block(Node *nd, float &lx, float &ly, float &ux, float &uy){
-	if(nd->pt_vec.size()==0)
-		return 0;
-	if(nd->pt_vec[0]->x >= lx&&
-	   nd->pt_vec[0]->x <= ux &&
-	   nd->pt_vec[0]->y >= ly &&
-	   nd->pt_vec[0]->y <= uy){
+	if(nd->pt.x >= lx&&
+	   nd->pt.x <= ux &&
+	   nd->pt.y >= ly &&
+	   nd->pt.y <= uy){
 		return 1;
 	}
 	else {
