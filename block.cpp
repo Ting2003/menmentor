@@ -153,20 +153,20 @@ bool compare_node_ptr(const Node * a, const Node * b){
 	if( a->is_ground() ) return false;
 	if (b->is_ground() ) return true;
 
-	if( a->pt_vec[0].y == b->pt_vec[0].y ){
-		if( a->pt_vec[0].x == b->pt_vec[0].x ){
-			if( a->pt_vec[0].z == b->pt_vec[0].z ){
+	if( a->pt.y == b->pt.y ){
+		if( a->pt.x == b->pt.x ){
+			if( a->pt.z == b->pt.z ){
 				return (a->isS() > b->isS());
 			}
 			else{
-				return (a->pt_vec[0].z > b->pt_vec[0].z);// top down
+				return (a->pt.z > b->pt.z);// top down
 			}
 		}
 		else
-			return ( a->pt_vec[0].x < b->pt_vec[0].x );
+			return ( a->pt.x < b->pt.x );
 	}
 	else
-		return (a->pt_vec[0].y < b->pt_vec[0].y);
+		return (a->pt.y < b->pt.y);
 }
 
 void Block::sort_nodes(){
@@ -175,8 +175,8 @@ void Block::sort_nodes(){
 
 // judge whether a node is within a block
 bool Block::node_in_block(Node *nd){
-	long x = nd->pt_vec[0].x;
-	long y = nd->pt_vec[0].y;
+	long x = nd->pt.x;
+	long y = nd->pt.y;
 	// if a node belongs to some block
 	if(x>=lx && x <ux && 
 		y>=ly && y<uy){

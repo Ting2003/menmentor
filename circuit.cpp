@@ -519,13 +519,13 @@ void Circuit::stamp_block_matrix_tr(int &my_id, Matrix &A, MPI_CLASS &mpi_class,
 			clog<<"b origin: "<<i<<" "<<block_info.bp[i]<<endl;
 	}*/	
 }
+#endif
 
 void Circuit::solve(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran){
 	// each block is solved by IT
 	solve_IT(my_id, num_procs, mpi_class, tran);
 	//clog<<my_id<<" finish solve: "<<endl;
 }
-#endif
 // solve Circuit
 bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran){
 	double time=0;

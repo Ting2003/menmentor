@@ -100,7 +100,6 @@ private:
 	char * filename;		  // input file name
 	// int n_layer;			  // total number of layers
 	vector<Circuit*> * p_ckts;	  // pointer to circkt list
-	vector<Net*> diag_net_set;
 	// vector<int> layer_in_ckt;	  // which circuit a layer belong
 };
 

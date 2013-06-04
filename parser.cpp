@@ -242,7 +242,7 @@ void Parser::update_node(Net * net){
 
 // parse the file and create circuits
 int Parser::create_circuits(vector<CKT_NAME> &ckt_name_vec){
-	int layer, n_circuit=0;
+	int n_circuit=0;
 
 	string prev_ckt_name("");
 	string name_string;
