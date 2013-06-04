@@ -312,16 +312,16 @@ void Block::stamp_resistor(int &my_id, Net * net){
 	int count = 0;
 	for(size_t j=0;j<2;j++){
 		Node *nk = nd[j], *nl = nd[1-j];
-		//if(my_id==0&& j==0)
-			// clog<<"net: "<<*net<<endl;
-		if( nk->isS()!=Y && nl->isS()!=Y) {
-			//clog<<"nk, nl: "<<*nk<<" "<<nk->rid<<" "<<*nl<<" "<<nl->rid<<" "<<nk->is_ground()<<" "<<nl->is_ground()<<endl;
+		// if(my_id==0&& j==0)
+			// clog<<"resis net: "<<*net<<endl;
+		// if( nk->isS()!=Y && nl->isS()!=Y) 
+		{
 			size_t k1 = nd_IdMap[nk];//nk->rid;
 			size_t l1 = nd_IdMap[nl];//nl->rid;
-			// if(my_id==0 &&(k1 == 567 || l1 == 567 ))
-				// clog<<"net: "<<*net<<endl;
+
+			// clog<<"nk, nl: "<<*nk<<" "<<k1<<" "<<*nl<<" "<<l1<<endl;
 			// search nk's nbr, skip insert for vol and induc nbr net
-			if(!nk->is_ground()){
+			if(nk->isS()!=Y && !nk->is_ground()){
 				bool flag = false;
 				for(size_t i=0;i<nk->nbr_vec.size();i++){
 					Net *net = nk->nbr_vec[i];
@@ -333,6 +333,7 @@ void Block::stamp_resistor(int &my_id, Net * net){
 				}
 				// if no inductance or voltage nbr net, stamp
 				if(flag == false){
+					// clog<<"push: ("<<k1<<","<<k1<<","<<G<<")"<<endl;
 					A.push_back(k1, k1, G);
 				}
 			}	
@@ -349,8 +350,10 @@ void Block::stamp_resistor(int &my_id, Net * net){
 						break;
 					}
 				}
-				if(flag == false)
+				if(flag == false){
 					A.push_back(k1,l1,-G);
+					// clog<<"push: ("<<k1<<","<<l1<<","<<-G<<endl;
+				}
 			}
 		}
 	}// end of for j		
