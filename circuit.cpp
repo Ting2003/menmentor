@@ -561,10 +561,8 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 		clog<<"DC matrix: "<<block_vec[i]->A<<endl;
 		}
 	}*/
-	clog<<"before solve DC> "<<endl;
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
-	clog<<"end solve DC> "<<endl;
 	if(my_id==0)
 		cout<<nodelist<<endl;
 	/*if(my_id==0)
@@ -2994,6 +2992,8 @@ void Circuit::update_geometry(int my_id, MPI_CLASS &mpi_class){
 	y_max = mpi_class.block_geo[3];
 
 	num_blocks = NUM_BLOCKS_X * NUM_BLOCKS_Y;
+	if(my_id==0)
+		clog<<"total num_blocks for one core: "<<num_blocks<<endl;
 	block_vec.clear();
 	for(int i=0; i<num_blocks;i++){
 		Block *temp_block = new Block();

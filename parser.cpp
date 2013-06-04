@@ -222,10 +222,14 @@ void Parser::update_node(Net * net){
 	Node *a=net->ab[0], *b=net->ab[1];
 	// assign isS() == Y
 	if(net->type == VOLTAGE){
-		if(a->is_ground())
+		if(a->is_ground()){
 			b->flag== 1;
-		else
+			b->value = net->value;
+		}
+		else{
 			a->flag = 1;
+			a->value = net->value;
+		}
 	}
 
 	// clog<<"parsing net: "<<*net<<endl;

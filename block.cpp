@@ -372,14 +372,14 @@ void Block::stamp_current(int &my_id, Net * net, MPI_CLASS &mpi_class){
 
 		bp[k] += -net->value;
 
-		// if(my_id==0) clog<<"bk: "<<k<<" "<<bp[k]<<endl;
+		// if(my_id==0) clog<<"bk: "<<*nk<<" "<<k<<" "<<bp[k]<<endl;
 		//pk[k] += -net->value;
 	}
 	if( !nl->is_ground() && nl->isS()!=Y && node_in_block(nl)){//nl->flag_bd ==0) {
 		size_t l = nd_IdMap[nl];//nl->rid;
 
 		bp[l] += net->value;
-		// if(my_id==0) clog<<"bk: "<<l<<" "<<bp[l]<<endl;
+		// if(my_id==0) clog<<"bk: "<<*nl<<" "<<l<<" "<<bp[l]<<endl;
 		//pl[l] +=  net->value;
 	}
 }
@@ -395,7 +395,8 @@ void Block::stamp_VDD(int &my_id, Net * net){
 	// do stamping for internal node
 	long id =nd_IdMap[X];//X->rep->rid;
 
-	// if(my_id==0) clog<<" stamp net: "<<*net<<endl;
+	// if(my_id==0) clog<<"VDD net: "<<*net<<endl;
+	// clog<<"id ("<<id<<","<<id<<",1)"<<endl;
 	A.push_back(id, id, 1.0);
 	
 	bool flag = false;
@@ -409,9 +410,12 @@ void Block::stamp_VDD(int &my_id, Net * net){
 	// if vol node connects to current net
 	if(flag == true){
 		bp[id] = net->value;
+		// clog<<"id=, bp: "<<id<<" "<<bp[id]<<endl;
 	}
-	else
+	else{
 		bp[id] += net->value;	
+		// clog<<"id+, bp: "<<id<<" "<<bp[id]<<endl;
+	}
 	// if(my_id==0) clog<<"id, bp: "<<id<<", "<<bp[id]<<endl;
 }
 
@@ -454,58 +458,44 @@ void Block::stamp_inductance_dc(Net * net, int &my_id){
 
 // search for the nodes connects to inductance and voltage sources
 void Block::make_A_symmetric(double *b, int &my_id){
-	int type = RESISTOR;
+	int type = VOLTAGE;
 	NetList & ns = net_set[type];
 	NetList::iterator it;
 	Node *p=NULL, *q=NULL, *r =NULL;
 
-	for(it=ns.begin();it!=ns.end();it++){
-           if( (*it) == NULL ) continue;
-	   Node *na = (*it)->ab[0]->rep;
-	   Node *nb = (*it)->ab[1]->rep;
- 
-           assert( fzero((*it)->value) == false );
-	   // the resistor net connects to voltage nets
-           if(!(na->isS()==Y || nb->isS()==Y)) continue;
+	for(size_t i=0;i<ns.size();i++){
+	   Net *net = ns[i];
+           if( net == NULL ) continue;
+	   Node *na = net->ab[0]->rep;
+	   if(na->isS()!=Y)
+		na = net->ab[1]->rep;
 
-           // node p points to Y node
-           if(na->isS()==Y){
-		bool flag = false;
-		for(size_t i=0;i<na->nbr_vec.size();i++){
-			Net *nbr_net = na->nbr_vec[i];
-			if(nbr_net->type == INDUCTANCE){
-				flag = true;
-				break;
-			}
+	   p = na; 
+	   // node p points to Y node
+	   for(size_t j=0;j<na->nbr_vec.size();j++){
+		Net *net_nbr = na->nbr_vec[j];
+		if(net_nbr->type != RESISTOR) 
+			continue;
+		// modify rhs of resistor net
+		if(net_nbr->ab[0]->rep->name == na->name){
+			q = net_nbr->ab[1]->rep;
 		}
-		if(flag == true){
-			p = na; q = nb;
+		else if(net_nbr->ab[1]->rep->name == na->name){
+			q = net_nbr->ab[0]->rep;
 		}
-	   } 
-           else if(nb->isS()==Y){
-		bool flag = false;
-		for(size_t i=0;i<nb->nbr_vec.size();i++){
-			Net *nbr_net = nb->nbr_vec[i];
-			if(nbr_net->type == INDUCTANCE){
-				flag = true;
-				break;
-			}
-		}
-		if(flag == true){
-			p = nb; q = na;
-		}
-	   }
 
-	   /*if(my_id==0){
-		   clog<<"modify rhs net: "<<*(*it)<<endl;
-		   clog<<"p, q and r: "<<*p<<" "<<*q<<" "<<*r<<endl;
-	   }*/
-           size_t id = nd_IdMap[q];// q->rid;
-           double G = 1.0 / (*it)->value;
-           
-           b[id] += p->value * G;
-	   // if(my_id==0)
+	   	/*if(my_id==0){
+		   clog<<"modify rhs net: "<<*net_nbr<<endl;
+		   clog<<"p, q: "<<*p<<" "<<*q<<" "<<endl;
+	   	}*/
+           	size_t id = nd_IdMap[q];// q->rid;
+           	double G = 1.0 / net_nbr->value;
+
+          	// clog<<"id, old_b: "<<id<<" "<<b[id]<<endl; 
+           	b[id] += p->value * G;
+	   	// if(my_id==0)
 		   // clog<<"id, new b: "<<id<<" "<<b[id]<<endl;
+	    }
         }
 }
 
@@ -1298,8 +1288,8 @@ void Block::stamp_bd_net(int my_id, Net *net){
 	size_t id;
 	if(node_in_block(na)){
 		id = nd_IdMap[na];
-		// if(my_id==0 &&(id == 567))
-				//cout<<"bd net: "<<*net<<" "<<*na<<" "<<id<<endl;
+		// if(my_id==0)
+			// clog<<"bd net: "<<*net<<" "<<*na<<" "<<id<<endl;
 
 		A.push_back(id, id, 1.0/net->value);
 		// if(my_id==0 && id ==567)
@@ -1308,8 +1298,8 @@ void Block::stamp_bd_net(int my_id, Net *net){
 	else if(node_in_block(nb)){
 		id = nd_IdMap[nb];
 
-		//if(my_id==0 &&(id == 567 || id==2861))
-				//clog<<"bd net: "<<*net<<" "<<*nb<<" "<<id<<endl;
+		// if(my_id==0)
+			// clog<<"bd net: "<<*net<<" "<<*nb<<" "<<id<<endl;
 		A.push_back(id, id, 1.0/net->value);
 		// if(my_id==0 && id ==567)
 			//clog<<"bd net: "<<id<<" "<<id<<" "<<1.0/net->value<<endl;
