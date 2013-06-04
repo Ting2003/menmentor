@@ -41,7 +41,7 @@ void Parser::extract_node(char * str, Node & nd){
 	char * saveptr;
 	char l[MAX_BUF];
 	strcpy(l, str);
-	const char * sep = "_";
+	const char * sep = "(,)";
 
 	// node name
 	chs = strtok_r(l, sep, &saveptr);
@@ -84,24 +84,27 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	const char *sep_1 = "_";
 	
 	sscanf(line, "%s %s %s %lf", sname, sa, sb, &value);
+	// net type
 	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
 	// ckt name
 	chs_1 = strtok_r(NULL, sep_1, &saveptr_1);
-	string ckt_name;
-	ckt_name.append(chs_1);
+	string ckt_name(chs_1);
+	// ckt_name.append(chs_1);
 	
 	extract_node(sa, nd[0]);
 	extract_node(sb, nd[1]);
 	//clog<<"after extract nodes. "<<endl;
 
 	int ckt_id = 0;
- 	for(size_t i=0;i<(*p_ckts).size();i++)
+ 	for(size_t i=0;i<(*p_ckts).size();i++){
 		if((*p_ckts)[i]->name == ckt_name){
-		ckt_id = i;
-		break;
-	}	
+			ckt_id = i;
+			break;
+		}
+	}
 	Circuit * ckt = (*p_ckts)[ckt_id];
-	
+
+	// clog<<"ckt, line: "<<ckt->name<<" "<<line<<" "<<endl;	
 	for(int i=0;i<2;i++){
 		if ( nd[i].is_ground() ){
 			nd_ptr[i] = ckt->nodelist[0]; // ground node
@@ -255,11 +258,13 @@ int Parser::create_circuits(vector<CKT_NAME> &ckt_name_vec){
 	int n_circuit=0;
 
 	string prev_ckt_name("");
-	string name_string;
 	Circuit * p_last_circuit=NULL;
 	// now read filename.info to create circuits (they are SORTED)
 	for(size_t i=0;i<ckt_name_vec.size();i++){
-		name_string = ckt_name_vec[i].name;
+		string name_string;
+		for(int j=0;ckt_name_vec[i].name[j]!='\n';j++)
+			name_string += ckt_name_vec[i].name[j];
+		// name_string.append(ckt_name_vec[i].name);
 		// compare with previous circuit name 
 		//name_string.assign(name);
 		if( prev_ckt_name == "" ||
@@ -501,6 +506,7 @@ int Parser::extract_ckt_name(int &my_id,
 			while(ss.getline(word, 10, ' ')){
 				if(word_count ==1 && (word[0] == 'v' || word[0] == 'V' ||
 					word[0] == 'G' || word[0] == 'g')){
+					//ckt_name(word);
 					strcpy(ckt_name.name, word);
 					ckt_name_vec.push_back(ckt_name);
 					// clog<<"ckt_name: "<<ckt_name.name<<endl;	
