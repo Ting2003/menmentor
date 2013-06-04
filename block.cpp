@@ -641,29 +641,46 @@ void Block::stamp_resistor_tr(int &my_id, Net * net){
 		Node *nk = nd[j], *nl = nd[1-j];
 
 		// skip resistor layer net
-		if(nk->isS()!=X && nl->isS()!=X) continue;
-		if(nk->isS()!=X) continue;
+		if(nk->isS()!=Y && nl->isS()!=Y) continue;
+		if(nk->isS()!=Y) continue;
 
 		size_t k1 = nd_IdMap[nk];//nk->rid;
 		size_t l1 = nd_IdMap[nl];//nl->rid;
 
 		// if(my_id==0) clog<<"net: "<<*net<<endl;
-		if( !nk->is_ground()&& 
-          		(nk->nbr[TOP]!= NULL &&
-			 nk->nbr[TOP]->type == INDUCTANCE))
-			A.push_back(k1,k1, G);
+		if( !nk->is_ground()){
+			bool flag = false;
+			for(size_t i=0;i<nk->nbr_vec.size();i++){
+				Net *nbr_net = nk->nbr_vec[i];
+				if(nbr_net->type == INDUCTANCE){
+					flag = true;
+					break;
+				}
+			}
+			if(flag == true)	
+				A.push_back(k1,k1, G);
+		}
 		// also need to push back connection
-		if(!nl->is_ground() 
-		    &&(nl->nbr[TOP] ==NULL ||
-		    nl->nbr[TOP]->type != INDUCTANCE))
-			if(l1 < k1){
-				//if(my_id==0) clog<<"push ("<<k1<<","<<l1<<","<<-G<<")"<<endl;
-				A.push_back(k1,l1,-G);
+		if(!nl->is_ground()){
+			bool flag = false;
+			for(size_t i=0;i<nk->nbr_vec.size();i++){
+				Net *nbr_net = nk->nbr_vec[i];
+				if(nbr_net->type == INDUCTANCE){
+					flag = true;
+					break;
+				}
 			}
-			else if(l1>k1){
-				//if(my_id==0) clog<<"push ("<<l1<<","<<k1<<","<<-G<<")"<<endl;
-				A.push_back(l1, k1, -G);
+			if(flag == false){ 
+				if(l1 < k1){
+					//if(my_id==0) clog<<"push ("<<k1<<","<<l1<<","<<-G<<")"<<endl;
+					A.push_back(k1,l1,-G);
+				}
+				else if(l1>k1){
+					//if(my_id==0) clog<<"push ("<<l1<<","<<k1<<","<<-G<<")"<<endl;
+					A.push_back(l1, k1, -G);
+				}
 			}
+		}
 	}// end of for j	
 }
 
@@ -672,17 +689,23 @@ void Block::stamp_VDD_tr(int &my_id, Net * net){
 	//if(my_id==0)
 		// clog<<"VDD net: "<<*net<<endl;
 	// find the non-ground node
-	Node * X = net->ab[0];
-	if( X->is_ground() ) X = net->ab[1];
+	Node * X = net->ab[0]->rep;
+	if( X->is_ground() ) X = net->ab[1]->rep;
 
-	if(!node_in_block(X->rep)) return;
+	if(!node_in_block(X)) return;
 	// if(X->rep->flag_bd ==1) return;
 	// do stamping for internal node
-	long id = nd_IdMap[X->rep];//X->rep->rid;
+	long id = nd_IdMap[X];//X->rep->rid;
 	// A.push_back(id, id, 1.0);
-	Net * south = X->rep->nbr[SOUTH];
-	if( south != NULL &&
-	    south->type == CURRENT ){
+	bool flag = false;
+	for(size_t i=0;i<X->nbr_vec.size();i++){
+		Net *nbr_net = X->nbr_vec[i];
+		if(nbr_net->type == CURRENT){
+			flag = true;
+			break;
+		}
+	}
+	if(flag == true){
 		// this node connects to a VDD and a current
 		// the current should be stamped
 		//assert( feqn(1.0, q[id]) ); 
@@ -793,16 +816,19 @@ void Block::make_A_symmetric_tr(int &my_id, Tran &tran){
 
 	for(it=ns.begin();it!=ns.end();it++){
            if( (*it) == NULL ) continue;
+	   Node *na = (*it)->ab[0]->rep;
+	   Node *nb = (*it)->ab[1]->rep;
+
            assert( fzero((*it)->value) == false );
-           if(!((*it)->ab[0]->rep->isS()==Y || (*it)->ab[1]->rep->isS()==Y)) continue;
+           if(!(na->isS()==Y || nb->isS()==Y)) continue;
 	   /*if(my_id==0)
 		   clog<<"bd net: "<<*(*it)<<endl;*/
            // node p points to X node
-           if((*it)->ab[0]->rep->isS()==Y){
-              p = (*it)->ab[0]->rep; q = (*it)->ab[1]->rep;
+           if(na->isS()==Y){
+              p = na; q = nb;
            } 
-           else if((*it)->ab[1]->rep->isS()==Y){
-              p = (*it)->ab[1]->rep; q = (*it)->ab[0]->rep;
+           else if(nb->isS()==Y){
+              p = nb; q = na;
            }           
 
            size_t id = nd_IdMap[q];//q->rid;
@@ -946,7 +972,14 @@ void Block::modify_rhs_c_tr(Net *net, double * rhs, double *x){
 	size_t k = nd_IdMap[nk];//nk->rid;
 	size_t l = nd_IdMap[nl];//nl->rid;
 
-	Net *r = nk->nbr[TOP];
+	Net * nbr_resis;
+	for(size_t i=0;i<nk->nbr_vec.size();i++){
+		if(nk->nbr_vec[i]->type == RESISTOR){
+			nbr_resis = nk->nbr_vec[i];
+			break;
+		}
+	}
+	Net *r = nbr_resis; //nk->nbr[TOP];
 	Node *a = r->ab[0]->rep;
 	Node *b = r->ab[1]->rep;
 	// a point to Z node
@@ -996,8 +1029,16 @@ void Block::modify_rhs_l_tr(Net *net, double *rhs, double *x){
 	     //x[k]<<" "<<x[l]<<endl;
 
 	//clog<<"delta_t/2L, nl-nk, temp: "<<tran.step_t / (2*net->value)<<" "<<(nl->value-nk->value)<<" "<<temp<<endl;
-	
-	Net *r = nk->nbr[BOTTOM];
+	Net *nbr_resis;
+	for(size_t i=0;i<nk->nbr_vec.size();i++){
+		Net *nbr_net = nk->nbr_vec[i];
+		if(nbr_net->type == RESISTOR){
+			nbr_resis = nbr_net;
+			break;
+		}
+	}
+
+	Net *r = nbr_resis;//nk->nbr[BOTTOM];
 	Node *a = r->ab[0]->rep;
 	Node *b = r->ab[1]->rep;
 	// a point to X node
@@ -1086,8 +1127,16 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 	size_t l = nd_IdMap[nl];//nl->rid;
 	//if(my_id==0)
 	//clog<<"k, l: "<<k<<" "<<l<<" "<<nk->flag_bd<<" "<<nl->flag_bd<<endl;
+	Net *nbr_resis;
+	for(size_t i=0;i<nk->nbr_vec.size();i++){
+		Net *nbr_net = nk->nbr_vec[i];
+		if(nbr_net->type == RESISTOR){
+			nbr_resis = nbr_net;
+			break;
+		}
+	}
 
-	Net *r = nk->nbr[TOP];
+	Net *r = nbr_resis; //nk->nbr[TOP];
 	Node *a = r->ab[0]->rep;
 	Node *b = r->ab[1]->rep;
 	// a point to Z node
@@ -1182,8 +1231,16 @@ void Block::modify_rhs_l_tr_0(Net *net, double *rhs, double *x, int &my_id){
 	     //x[k]<<" "<<x[l]<<endl;
 
 	//clog<<"delta_t/2L, nl-nk, temp: "<<tran.step_t / (2*net->value)<<" "<<(nl->value-nk->value)<<" "<<temp<<endl;
-	
-	Net *r = nk->nbr[BOTTOM];
+	Net *nbr_resis;
+	for(size_t i=0;i<nk->nbr_vec.size();i++){
+		Net *nbr_net = nk->nbr_vec[i];
+		if(nbr_net->type == RESISTOR){
+			nbr_resis = nbr_net;
+			break;
+		}
+	}
+
+	Net *r = nbr_resis;//nk->nbr[BOTTOM];
 	Node *a = r->ab[0]->rep;
 	Node *b = r->ab[1]->rep;
 	// a point to X node

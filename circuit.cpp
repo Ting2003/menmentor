@@ -42,8 +42,8 @@ const int MAX_ITERATION = 1000;
 const int SAMPLE_INTERVAL = 5;
 const size_t SAMPLE_NUM_NODE = 10;
 const double MERGE_RATIO = 0.3;
-int Circuit::NUM_BLOCKS_X = 2;
-int Circuit::NUM_BLOCKS_Y = 2;
+int Circuit::NUM_BLOCKS_X = 1;
+int Circuit::NUM_BLOCKS_Y = 1;
 int Circuit::DEBUG=1;
 
 //////////////////////////////////////////////////////////////////////////
@@ -2342,7 +2342,7 @@ void Circuit::set_eq_capac(Tran &tran){
 	for(size_t i=0;i<ns.size();i++)
 		ns[i]->value = 2*ns[i]->value/tran.step_t;
 }
-
+#if 0
 // update rhs by transient nets
 void Circuit::modify_rhs_tr_0(double * b, double *x, int &my_id){
 	for(int type=0;type<NUM_NET_TYPE;type++){
@@ -2375,7 +2375,7 @@ void Circuit::modify_rhs_tr(double * b, double *x){
 		}
 	}
 }
-
+#endif
 void Circuit::parse_path_table(){
    // build up nodelist info
       Node_G *node;

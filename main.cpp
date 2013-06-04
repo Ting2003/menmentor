@@ -116,7 +116,7 @@ int main(int argc, char * argv[]){
 	
 	double mpi_t11, mpi_t12;
 	mpi_t11 = MPI_Wtime();
-	
+#if 0	
 	for(size_t i=0;i<cktlist.size();i++){
 		Circuit * ckt = cktlist[i];
 		if(my_id==0){
@@ -142,7 +142,7 @@ int main(int argc, char * argv[]){
 		//close_logfile();
 		//clog<<"after close file/ "<<endl;
 	}
-
+#endif
 	// close_logfile();
 	MPI_Barrier(MPI_COMM_WORLD);
 	// MPI_Abort(MPI_COMM_WORLD, 911);
