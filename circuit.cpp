@@ -54,7 +54,7 @@ Circuit::Circuit(string _name):name(_name),
 	x_min(INFTY),y_min(INFTY),x_max(0),y_max(0),
 	circuit_type(UNKNOWN), VDD(0.0){
 	// add ground node
-	Node * gnd = new Node(string("0"));
+	Node * gnd = new Node(string("0"), Point(-1,-1,-1));
 	gnd->rep = gnd;
 	this->add_node(gnd);
 
@@ -563,7 +563,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
-	if(my_id==0)
+	if(my_id==3)
 		cout<<nodelist<<endl;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;
@@ -2915,8 +2915,8 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	while( iter < MAX_ITERATION ){
 		diff = solve_iteration(my_id, iter, num_procs, mpi_class);
 		iter++;
-		// if(my_id ==0)
-			//clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
+		if(my_id ==0)
+			clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
 		if( diff < EPSILON ){
 			successful = true;
 			break;
@@ -3092,7 +3092,7 @@ void Circuit::assign_block_nets(int my_id){
 		}
 	}
 	int type = RESISTOR;
-	// if(my_id==0) clog<<"bd_netlist: "<<bd_netlist.size()<<endl;
+	if(my_id==0) clog<<"bd_netlist: "<<bd_netlist.size()<<endl;
 	// then handle boundary nets of ckt
 	for(size_t i=0;i<bd_netlist.size();i++){
 		net = bd_netlist[i];

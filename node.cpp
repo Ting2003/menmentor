@@ -4,7 +4,7 @@
 using namespace std;
 
 // empty constructor
-Node::Node():name(""),rid(0),
+Node::Node():name(""),pt(Point(-1,-1,-1)), rid(0),
 	value(0.0), flag(-1), rep(NULL){
 	nbr_vec.clear();
 	for(int i=0;i<4;i++){
@@ -23,8 +23,8 @@ Node::~Node (){
 	delete [] eqvr;
 }
 
-Node::Node(string n, int x, double v): 
-	name(n), rid(0), 
+Node::Node(string n, Point _pt, int x, double v): 
+	name(n), pt(_pt), rid(0), 
 	value(v), flag(x), rep(NULL) {
 	nbr_vec.clear();
 	for(int i=0;i<4;i++){
@@ -86,7 +86,7 @@ ostream & operator << (ostream & os, const Node & node){
 	//os<<" rep="<<node.rep->name;
 	//Net * net = node.nbr[TOP];
 	os<<setw(OUTPUT_WIDTH_STRING)<<node.name
-	 //  <<" "<<node.rep->pt
+	   <<" "<<node.rep->pt
 	  //<<" top="<<(net==NULL?"NULL":net->name)
 	  <<setw(OUTPUT_WIDTH_FLOAT)<<scientific<<node.value;
 	return os;

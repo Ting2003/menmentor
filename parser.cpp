@@ -31,7 +31,7 @@ void Parser::extract_node(char * str, Node & nd, char * coord){
 	//static Node gnd(string("0"), Point(-1,-1,-1));
 	if( str[0] == '0' ) {
 		nd.name="0";
-		nd.pt.set(-1,-1,-1);
+		//nd.pt.set(-1,-1,-1);
 		return;
 	}
 
@@ -87,10 +87,14 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	const char *sep_1 = "_";
 	// find grid boundary x and y
 	sscanf(line, "%s %s %s", sname,sa,sb);
-	if(sa == "0" || sb == "0"){
+	// if(my_id==1)
+		// clog<<"block 1 line, sa, sb: "<<line<<" "<<sa<<" "<<sb<<endl;
+	if(sa[0] == '0' || sb[0] == '0'){
+	// if(sa == "0" || sb == "0"){
 		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
 		// copy string
 		strcpy(coord2, coord1);
+		// clog<<"coord1, coord2: "<<coord1<<" "<<coord2<<endl;
 		// coord2 = coord1;
 	}
 	else 
@@ -129,6 +133,8 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			count = cpr_nd_block(nd_ptr[i], mpi_class.block_geo, my_id);
 			if (count==1) // internal node
 				ckt->add_node(nd_ptr[i]);
+				if(my_id==1)
+					clog<<"circuit add node: "<<*nd_ptr[i]<<endl;
 			else{
 				nd_ptr[i]->flag_bd = 1;
 			}
@@ -345,10 +351,10 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// temporary comment second parse	
-	if(my_id==0) clog<<"before second parse. "<<endl;
+	// if(my_id==0) clog<<"before second parse. "<<endl;
 	second_parse(my_id, mpi_class, tran, num_procs);
 
-	if(my_id==0) clog<<"after second parse."<<endl;
+	// if(my_id==0) clog<<"after second parse."<<endl;
 }
 
 void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
@@ -538,7 +544,8 @@ int Parser::extract_ckt_name(int &my_id,
 		else if(line[0]!='.'){
 			// find grid boundary x and y
 			sscanf(line, "%s %s %s", sname,sa,sb);
-			if(sa == "0" || sb == "0"){
+			if(sa[0] == '0' || sb[0] == '0'){
+			// if(sa == "0" || sb == "0"){
 				sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
 					star, coord1);
 				// copy string
@@ -672,7 +679,8 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 		   line[0]=='c' || line[0] == 'C' ||
 		   line[0]=='l' || line[0] == 'L'){
 			sscanf(line, "%s %s %s", sname,sa,sb);
-			if(sa == "0" || sb == "0"){
+			if(sa[0] == '0' || sb[0] == '0'){	
+			// if(sa == "0" || sb == "0"){
 				sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
 					star, coord1);
 				// copy string
