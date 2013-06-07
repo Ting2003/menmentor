@@ -396,7 +396,7 @@ void Block::stamp_VDD(int &my_id, Net * net){
 	long id =nd_IdMap[X];//X->rep->rid;
 
 	// if(my_id==0) clog<<"VDD net: "<<*net<<endl;
-	// clog<<"id ("<<id<<","<<id<<",1)"<<endl;
+		// clog<<"id ("<<id<<","<<id<<",1)"<<endl;
 	A.push_back(id, id, 1.0);
 	
 	bool flag = false;

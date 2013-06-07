@@ -94,7 +94,7 @@ private:
 
 	//void insert_net_node(string line);
 	void insert_net_node(char * line, int &count, MPI_CLASS &mpi_class);
-	void extract_node(char * str, Node & nd);
+	void extract_node(char * str, Node & nd, char *coord);
 	void update_node(Net * net);
 
 	char * filename;		  // input file name

@@ -19,9 +19,9 @@ Net::~Net(){
 
 ostream & operator << (ostream & os, const Net & net){
 	os//<<net.name
-		<<"("
-	    <<net.ab[0]->name<<" "<<net.ab[0]->pt<<","
-	    <<net.ab[1]->name<<" "<<net.ab[1]->pt<<")="
+		//<<" "
+	    <<net.ab[0]->name<<" "
+	    <<net.ab[1]->name<<" "
  	    <<scientific<<net.value;
 	return os;
 }

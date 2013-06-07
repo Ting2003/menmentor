@@ -27,7 +27,7 @@ Parser::~Parser(){ }
 
 // node234_2_3_4 
 // name_z_x_y
-void Parser::extract_node(char * str, Node & nd){
+void Parser::extract_node(char * str, Node & nd, char * coord){
 	//static Node gnd(string("0"), Point(-1,-1,-1));
 	if( str[0] == '0' ) {
 		nd.name="0";
@@ -40,21 +40,20 @@ void Parser::extract_node(char * str, Node & nd){
 	char * chs;
 	char * saveptr;
 	char l[MAX_BUF];
-	strcpy(l, str);
+	strcpy(l, coord);
 	const char * sep = "(,)";
 
 	// node name
 	chs = strtok_r(l, sep, &saveptr);
 	string node_name;
-	node_name.append(chs);
-	
+	// node_name.append(chs);
+	node_name.append(str);
 	// for transient, 'Y' is the VDD source node
 	/*if( chs[0] == 'X' || chs[0]== 'Y' || chs[0]== 'Z' ){
 		flag = chs[0]-'X';
 		chs = strtok_r(NULL, sep, &saveptr);
 	}*/
 
-	chs = strtok_r(NULL, sep, &saveptr);
 	z = atol(chs);
 	chs = strtok_r(NULL, sep, &saveptr);
 	x = atol(chs);
@@ -74,6 +73,10 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	static char sname[MAX_BUF];
 	static char sa[MAX_BUF];
 	static char sb[MAX_BUF];
+	
+	static char star[MAX_BUF];
+	static char coord1[MAX_BUF];
+	static char coord2[MAX_BUF];
 	static Node nd[2];
 	Node * nd_ptr[2];	// this will be set to the two nodes found
 	double value;
@@ -82,8 +85,17 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	char *chs_1;
 	char *saveptr_1;
 	const char *sep_1 = "_";
-	
-	sscanf(line, "%s %s %s %lf", sname, sa, sb, &value);
+	// find grid boundary x and y
+	sscanf(line, "%s %s %s", sname,sa,sb);
+	if(sa == "0" || sb == "0"){
+		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
+		// copy string
+		strcpy(coord2, coord1);
+		// coord2 = coord1;
+	}
+	else 
+		sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, star, coord1, coord2);
+
 	// net type
 	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
 	// ckt name
@@ -91,8 +103,8 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	string ckt_name(chs_1);
 	// ckt_name.append(chs_1);
 	
-	extract_node(sa, nd[0]);
-	extract_node(sb, nd[1]);
+	extract_node(sa, nd[0], coord1);
+	extract_node(sb, nd[1], coord2);
 	//clog<<"after extract nodes. "<<endl;
 
 	int ckt_id = 0;
@@ -165,15 +177,18 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 
 	// create a Net
 	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
-
+#if 0
 	if(net_type == CURRENT){
+		cout<<"to current net. "<<endl;
 		net->tr = new double [7];
 		// assign pulse paramter for pulse input
 		chs = strtok_r(line, sep, &saveptr);
 		for(int i=0;i<3;i++)
 			chs = strtok_r(NULL, sep, &saveptr);
-		if(chs != NULL)
+		if(chs != NULL){
+			clog<<"chs: "<<chs<<endl;
 			chs = strtok_r(NULL, sep, &saveptr);
+			}
 		if(chs != NULL){
 			chs = strtok_r(NULL, sep, &saveptr);
 			// V1
@@ -198,6 +213,7 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			net->tr[6] = atof(chs);
 		}
 	}
+#endif
 	// trick: when the value of a resistor via is below a threshold,
 	// treat it as a 0-voltage via
 	//if( Circuit::MODE == (int)IT ) {
@@ -329,10 +345,10 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// temporary comment second parse	
-	// if(my_id==0) clog<<"before second parse. "<<endl;
+	if(my_id==0) clog<<"before second parse. "<<endl;
 	second_parse(my_id, mpi_class, tran, num_procs);
 
-	// if(my_id==0) clog<<"after second parse."<<endl;
+	if(my_id==0) clog<<"after second parse."<<endl;
 }
 
 void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
@@ -475,6 +491,10 @@ int Parser::extract_ckt_name(int &my_id,
 	static char sname[MAX_BUF];
 	static char sa[MAX_BUF];
 	static char sb[MAX_BUF];
+	
+	static char star[MAX_BUF];
+	static char coord1[MAX_BUF];
+	static char coord2[MAX_BUF];
 	static Node nd[2];
 	double value;
 	int i=0;
@@ -517,13 +537,22 @@ int Parser::extract_ckt_name(int &my_id,
 		}
 		else if(line[0]!='.'){
 			// find grid boundary x and y
-			sscanf(line, "%s %s %s %lf", sname,sa,sb, &value);
+			sscanf(line, "%s %s %s", sname,sa,sb);
+			if(sa == "0" || sb == "0"){
+				sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
+					star, coord1);
+				// copy string
+				strcpy(coord2, coord1);
+			}
+			else 
+				sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, 
+					star, coord1, coord2);
 			// clog<<"line: "<<line<<endl;	
-			//if( sa[0] != '0' ) 
-				extract_node(sa, nd[0]);
+			//if( sa[0] != '0' )
+				extract_node(sa, nd[0], coord1);
 
 			//if( sb[0] != '0' ) 
-				extract_node(sb, nd[1]);
+				extract_node(sb, nd[1], coord2);
 			for(i=0;i<2;i++){
 				if(nd[i].pt.x > x_max) 
 					x_max = nd[i].pt.x;
@@ -622,6 +651,10 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 	// handles the long print sentence
 	int temp_buf = 10000000;
 	char line[temp_buf];
+	
+	static char star[MAX_BUF];
+	static char coord1[MAX_BUF];
+	static char coord2[MAX_BUF];
 	string line_s;
 
 	int color = 0;
@@ -638,15 +671,19 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 		   line[0]=='i' || line[0]=='I' ||
 		   line[0]=='c' || line[0] == 'C' ||
 		   line[0]=='l' || line[0] == 'L'){
-			// clog<<line<<endl;
-			sscanf(line, "%s %s %s %lf", 
-					sname, sa, sb, &value);
-			if( sa[0] == '0' )
-				nd[0].pt.set(-1,-1,-1); 
-			else extract_node(sa, nd[0]);
-			if( sb[0] == '0' )
-				nd[1].pt.set(-1,-1,-1); 
-			else	extract_node(sb, nd[1]);
+			sscanf(line, "%s %s %s", sname,sa,sb);
+			if(sa == "0" || sb == "0"){
+				sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
+					star, coord1);
+				// copy string
+				strcpy(coord2, coord1);
+			}
+			else 
+				sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, 
+					star, coord1, coord2);
+
+			extract_node(sa, nd[0], coord1);
+			extract_node(sb, nd[1], coord2);
 		
 			for(int i=0;i<num_blocks;i++){
 				// at least one node is inside block
