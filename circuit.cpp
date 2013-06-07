@@ -563,7 +563,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
-	if(my_id==3)
+	if(my_id==0)
 		cout<<nodelist<<endl;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;

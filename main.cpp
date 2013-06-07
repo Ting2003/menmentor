@@ -120,6 +120,8 @@ int main(int argc, char * argv[]){
 //#if 0	
 	for(size_t i=0;i<cktlist.size();i++){
 		Circuit * ckt = cktlist[i];
+		// if(ckt->get_name() != "VDD")
+			// continue;
 		if(my_id==0){
 			clog<<"<======== solving: "<<ckt->get_name()<<" =========>"<<my_id<<endl;
 		}

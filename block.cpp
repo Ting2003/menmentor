@@ -228,6 +228,9 @@ void Block::copy_node_voltages_block(){
 }
 
 void Block::stamp_matrix(int &my_id, MPI_CLASS &mpi_class){
+	/*if(my_id==0)
+	for(size_t i=0;i<replist.size();i++)
+		clog<<"i, nd: "<<i<<" "<<*replist[i]<<endl;*/
 	for(int type=0;type<NUM_NET_TYPE;type++){
 		NetList & ns = net_set[type];
 		NetList::iterator it;
@@ -310,7 +313,7 @@ void Block::stamp_resistor(int &my_id, Net * net){
 	G = 1./net->value;
 
 	// if(nd[0]->name == "VDD:2" || nd[1]->name == "VDD:2")
-		// clog<<"resis net: "<<*net<<endl;	
+		 // clog<<"resis net: "<<*net<<endl;	
 	int count = 0;
 	for(size_t j=0;j<2;j++){
 		Node *nk = nd[j], *nl = nd[1-j];
@@ -337,7 +340,7 @@ void Block::stamp_resistor(int &my_id, Net * net){
 				// if no inductance or voltage nbr net, stamp
 				if(flag == false){
 					//if(nk->name == "VDD:2" || nl->name == "VDD:2")
-						//clog<<"push: ("<<k1<<","<<k1<<","<<G<<")"<<endl;
+						// clog<<"push: ("<<k1<<","<<k1<<","<<G<<")"<<endl;
 					A.push_back(k1, k1, G);
 				}
 
@@ -355,7 +358,7 @@ void Block::stamp_resistor(int &my_id, Net * net){
 					if(flag_nl == false){
 						A.push_back(k1,l1,-G);
 						// if(nk->name == "VDD:2" || nl->name == "VDD:2")
-							// clog<<"push: ("<<k1<<","<<l1<<","<<-G<<endl;
+							 // clog<<"push: ("<<k1<<","<<l1<<","<<-G<<endl;
 					}
 				}
 			}

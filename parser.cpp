@@ -133,8 +133,8 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			count = cpr_nd_block(nd_ptr[i], mpi_class.block_geo, my_id);
 			if (count==1) // internal node
 				ckt->add_node(nd_ptr[i]);
-				if(my_id==1)
-					clog<<"circuit add node: "<<*nd_ptr[i]<<endl;
+				// if(my_id==0)
+					// clog<<"circuit add node: "<<*nd_ptr[i]<<endl;
 			else{
 				nd_ptr[i]->flag_bd = 1;
 			}
