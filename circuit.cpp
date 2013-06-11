@@ -2990,6 +2990,7 @@ void Circuit::update_geometry(int my_id, MPI_CLASS &mpi_class){
 	y_min = mpi_class.block_geo[1];
 	x_max = mpi_class.block_geo[2];
 	y_max = mpi_class.block_geo[3];
+	clog<<"ckt bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
 
 	num_blocks = NUM_BLOCKS_X * NUM_BLOCKS_Y;
 	if(my_id==0)

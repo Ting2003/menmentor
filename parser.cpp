@@ -507,10 +507,10 @@ int Parser::extract_ckt_name(int &my_id,
 	static Node nd[2];
 	double value;
 	int i=0;
-	long x_max=0;
-	long x_min=0;
-	long y_max=0;
-	long y_min=0;
+	long x_max=-1;
+	long x_min=-1;
+	long y_max=-1;
+	long y_min=-1;
 
 
 	// only processor 0 will extract layer info
@@ -566,11 +566,13 @@ int Parser::extract_ckt_name(int &my_id,
 			for(i=0;i<2;i++){
 				if(nd[i].pt.x > x_max) 
 					x_max = nd[i].pt.x;
-				if(nd[i].pt.x>0 && nd[i].pt.x <x_min)
+				if(x_min == -1) x_min = x_max;
+				else if(nd[i].pt.x>0 && nd[i].pt.x <x_min)
 					x_min = nd[i].pt.x;
 				if(nd[i].pt.y > y_max)
 					y_max = nd[i].pt.y;
-				if(nd[i].pt.y>0 && nd[i].pt.y <y_min)
+				if(y_min == -1) y_min = y_max;
+				else if(nd[i].pt.y>0 && nd[i].pt.y <y_min)
 					y_min = nd[i].pt.y;
 			}
 		}else if(line[0] == '.'){
@@ -582,7 +584,7 @@ int Parser::extract_ckt_name(int &my_id,
 	mpi_class.x_min = x_min;
 	mpi_class.y_max = y_max;
 	mpi_class.y_min = y_min;
-	clog<<"ckt bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
+	clog<<"power grid bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
 	fclose(f);
 	// sort resulting vector by the ckt name
 	sort(ckt_name_vec);
@@ -609,9 +611,9 @@ bool Parser::sort(vector<CKT_NAME > &a){
 
 void Parser::set_block_geometry(float *geo, MPI_CLASS &mpi_class){
 	double x, y;
-	x = (double)(mpi_class.x_max-mpi_class.x_min+0.5) 
+	x = (double)(mpi_class.x_max-mpi_class.x_min+0.5)*1.0 
 		/ mpi_class.X_BLOCKS;
-	y = (double)(mpi_class.y_max-mpi_class.y_min+0.5) 
+	y = (double)(mpi_class.y_max-mpi_class.y_min+0.5)*1.0
 		/ mpi_class.Y_BLOCKS;
 	//if( fzero(x) ) x = 1.0;
 	//if( fzero(y) ) y = 1.0;
@@ -633,13 +635,13 @@ void Parser::set_block_geometry(float *geo, MPI_CLASS &mpi_class){
 		for(size_t x=0;x<mpi_class.X_BLOCKS;x++){
 			bid = y * mpi_class.X_BLOCKS + x;
 			// lx
-			geo[4*bid] = x * len_per_block_x - len_ovr_x;
+			geo[4*bid] = mpi_class.x_min + x * len_per_block_x - len_ovr_x;
 			// ly
-			geo[4*bid+1] = y * len_per_block_y - len_ovr_y;
+			geo[4*bid+1] = mpi_class.y_min + y * len_per_block_y - len_ovr_y;
 			// ux
-			geo[4*bid+2] = (x+1) * len_per_block_x + len_ovr_x;
+			geo[4*bid+2] = mpi_class.x_min + (x+1) * len_per_block_x + len_ovr_x;
 			// uy
-			geo[4*bid+3] = (y+1) * len_per_block_y + len_ovr_y;
+			geo[4*bid+3] = mpi_class.y_min + (y+1) * len_per_block_y + len_ovr_y;
 		}
 	}
 }

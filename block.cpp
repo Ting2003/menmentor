@@ -177,6 +177,7 @@ void Block::sort_nodes(){
 bool Block::node_in_block(Node *nd){
 	long x = nd->pt.x;
 	long y = nd->pt.y;
+	// clog<<"block bd: "<<lx<<" "<<ly<<" "<<ux<<" "<<uy<<endl;
 	// if a node belongs to some block
 	if(x>=lx && x <=ux && 
 		y>=ly && y<=uy){
