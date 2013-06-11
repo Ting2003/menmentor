@@ -128,6 +128,7 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		else if ( (nd_ptr[i] = ckt->get_node(nd[i].name) ) == NULL ){
 			// create new node and insert
 			nd_ptr[i] = new Node(nd[i]); // copy constructor
+			
 			nd_ptr[i]->ckt_name = ckt_name;
 			nd_ptr[i]->rep = nd_ptr[i];  // set rep to be itself
 			count = cpr_nd_block(nd_ptr[i], mpi_class.block_geo, my_id);
@@ -181,8 +182,10 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		break;
 	}
 
-	// create a Net
+	
+		// create a Net
 	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
+
 #if 0
 	if(net_type == CURRENT){
 		cout<<"to current net. "<<endl;

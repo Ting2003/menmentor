@@ -3078,8 +3078,10 @@ void Circuit::assign_block_nets(int my_id){
 		for(size_t i=0;i<ns.size();i++){
 			net = ns[i];	
 			net_flag = 0;
+			
 			for(size_t j=0;j<N_blocks;j++){
 				net_flag = block_vec[j]->net_in_block(net);
+				
 				if(net_flag == 0)
 					continue;
 				if(net_flag == 2)

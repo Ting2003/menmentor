@@ -86,7 +86,7 @@ ostream & operator << (ostream & os, const Node & node){
 	//os<<" rep="<<node.rep->name;
 	//Net * net = node.nbr[TOP];
 	os<<setw(OUTPUT_WIDTH_STRING)<<node.name
-	   <<" "<<node.rep->pt
+	    // <<" "<<node.rep->pt
 	  //<<" top="<<(net==NULL?"NULL":net->name)
 	  <<setw(OUTPUT_WIDTH_FLOAT)<<scientific<<node.value;
 	return os;

@@ -178,8 +178,8 @@ bool Block::node_in_block(Node *nd){
 	long x = nd->pt.x;
 	long y = nd->pt.y;
 	// if a node belongs to some block
-	if(x>=lx && x <ux && 
-		y>=ly && y<uy){
+	if(x>=lx && x <=ux && 
+		y>=ly && y<=uy){
 		return true;
 	}
 	return false;
@@ -195,13 +195,14 @@ int Block::net_in_block(Net *net){
 	nb = net->ab[1];
 	bool flag_a = false;
 	bool flag_b = false;
+
 	if(!na->is_ground()){
 		flag_a = node_in_block(na);
 	}
 	if(!nb->is_ground()){
 		flag_b = node_in_block(nb);
 	}	
-	
+
 	if(na->is_ground() && flag_b == true)
 		return 2;
 	if(nb->is_ground() && flag_a == true)
@@ -237,7 +238,7 @@ void Block::stamp_matrix(int &my_id, MPI_CLASS &mpi_class){
 		switch(type){
 		case RESISTOR:
 			// if(my_id==0)
-				//clog<<"resis net. "<<ns.size()<<endl;
+				// clog<<"resis net. "<<ns.size()<<endl;
 			for(it=ns.begin();it!=ns.end();++it){
 				Net * net = *it;
 				if( net == NULL ) continue;
@@ -246,6 +247,7 @@ void Block::stamp_matrix(int &my_id, MPI_CLASS &mpi_class){
 			}
 			break;
 		case CURRENT:
+			// clog<<"current net. "<<ns.size()<<endl;
 			for(it=ns.begin();it!=ns.end();++it){
 				stamp_current(my_id, (*it), mpi_class);
 			}
@@ -311,7 +313,6 @@ void Block::stamp_resistor(int &my_id, Net * net){
 	
 	double G;	
 	G = 1./net->value;
-
 	// if(nd[0]->isS() == Y || nd[1]->isS() == Y)
 		// clog<<endl<<"resis net: "<<*net<<endl;	
 	int count = 0;
