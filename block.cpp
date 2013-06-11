@@ -230,9 +230,6 @@ void Block::copy_node_voltages_block(){
 }
 
 void Block::stamp_matrix(int &my_id, MPI_CLASS &mpi_class){
-	/*if(my_id==0)
-	for(size_t i=0;i<replist.size();i++)
-		clog<<"i, nd: "<<i<<" "<<*replist[i]<<endl;*/
 	for(int type=0;type<NUM_NET_TYPE;type++){
 		NetList & ns = net_set[type];
 		NetList::iterator it;

@@ -171,6 +171,8 @@ public:
 	NodePtrVector internal_nodelist_n;
 	NodePtrVector internal_nodelist_ne;
 
+	// record the base output file name
+	char *output_basename;
 private:
 	// member functions
 
@@ -215,6 +217,7 @@ private:
 		int&num_procs, MPI_CLASS &mpi_class);
 
 	void solve_DC(int &num_blocks, int &my_id, MPI_CLASS &mpi_class);
+	void print_output_DC(int my_id);
 	bool solve_tr_step(int &num_procs, int &my_id, MPI_CLASS &mpi_class);
 	void solve_tr(Tran &tran, int &my_id);
 	

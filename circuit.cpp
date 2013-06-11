@@ -38,7 +38,7 @@ size_t Circuit::MAX_BLOCK_NODES =100000;//5500;
 double Circuit::OMEGA = 1.2;
 double Circuit::OVERLAP_RATIO = 0;
 int    Circuit::MODE = 0;
-const int MAX_ITERATION = 1000;
+const int MAX_ITERATION = 100000000;
 const int SAMPLE_INTERVAL = 5;
 const size_t SAMPLE_NUM_NODE = 10;
 const double MERGE_RATIO = 0.3;
@@ -563,6 +563,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
+	print_output_DC(my_id);	
 	if(my_id==0)
 		cout<<nodelist<<endl;
 	/*if(my_id==0)
@@ -2915,8 +2916,8 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	while( iter < MAX_ITERATION ){
 		diff = solve_iteration(my_id, iter, num_procs, mpi_class);
 		iter++;
-		if(my_id ==0)
-			clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
+		// if(my_id ==0)
+			// clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
 		if( diff < EPSILON ){
 			successful = true;
 			break;
@@ -2951,10 +2952,7 @@ void Circuit::check_matrix(Matrix &A){
 			//cout<<"diagonal:  "<<A.Ti[i]<<" "<<A.Tj[i]<<" "<<A.Tx[i]<<endl;
 	}
 	return;
-	for(size_t i=0;i<A.size();i++){
-		if(A.Ti[i]==847 || A.Tj[i]==847)
-			cout<<"all: "<<A.Ti[i]<<" "<<A.Tj[i]<<" "<<A.Tx[i]<<endl;
-	}
+	
 	return;
 	for(size_t i=0;i<A.size();i++){
 		size_t row = A.Ti[i];
@@ -3202,4 +3200,9 @@ double Circuit::find_diff(int my_id){
 	}
 	// return the max vol diff of 2 iters
 	return diff;
+}
+
+// print output nodes to a set of files
+void Circuit::print_output_DC(int my_id){
+	
 }
