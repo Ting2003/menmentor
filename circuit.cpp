@@ -563,9 +563,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
-	print_output_DC(my_id);	
-	if(my_id==0)
-		cout<<nodelist<<endl;
+	cout<<nodelist<<endl;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;
 		for(size_t i=0;i<block_vec.size();i++){
@@ -2988,11 +2986,11 @@ void Circuit::update_geometry(int my_id, MPI_CLASS &mpi_class){
 	y_min = mpi_class.block_geo[1];
 	x_max = mpi_class.block_geo[2];
 	y_max = mpi_class.block_geo[3];
-	clog<<"ckt bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
+	// clog<<"ckt bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
 
 	num_blocks = NUM_BLOCKS_X * NUM_BLOCKS_Y;
-	if(my_id==0)
-		clog<<"total num_blocks for one core: "<<num_blocks<<endl;
+	// if(my_id==0)
+		// clog<<"total num_blocks for one core: "<<num_blocks<<endl;
 	block_vec.clear();
 	for(int i=0; i<num_blocks;i++){
 		Block *temp_block = new Block();
@@ -3200,9 +3198,4 @@ double Circuit::find_diff(int my_id){
 	}
 	// return the max vol diff of 2 iters
 	return diff;
-}
-
-// print output nodes to a set of files
-void Circuit::print_output_DC(int my_id){
-	
 }

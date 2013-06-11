@@ -85,7 +85,16 @@ int main(int argc, char * argv[]){
 	if(my_id==0) clog<<"num_procs: "<<num_procs<<endl;	
 
 	open_logfile(logfile);
-	if( freopen(output, "w", stdout) == NULL )
+	// FILE *oof;
+	stringstream ss;
+	ss<<output<<"_"<<my_id;
+	// oof = fopen(ss.str().c_str(), "w");
+	// if(!oof)
+		// report_exit("output file error\n");
+	// fclose(oof);
+
+	
+	if( freopen(ss.str().c_str(), "w", stdout) == NULL )
 		report_exit("Ouptut file error\n");
 
 	Circuit::set_parameters(epsilon, omega, overlap_ratio, 
@@ -120,7 +129,6 @@ int main(int argc, char * argv[]){
 //#if 0	
 	for(size_t i=0;i<cktlist.size();i++){
 		Circuit * ckt = cktlist[i];
-		ckt->output_basename = output;
 		// if(ckt->get_name() != "VDD")
 			// continue;
 		if(my_id==0){
