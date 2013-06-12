@@ -250,7 +250,7 @@ void Circuit::sort_internal_nodes(int &my_id){
 string Circuit::get_name() const{return this->name;}
 
 ostream & operator << (ostream & os, const NodePtrVector & nodelist){
-	for(size_t i=0;i<nodelist.size();i++)
+	for(size_t i=0;i<nodelist.size()-1;i++)
 		os<<*nodelist[i]<<endl;
 	return os;
 }
@@ -563,7 +563,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
-	cout<<nodelist<<endl;
+	// cout<<nodelist;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;
 		for(size_t i=0;i<block_vec.size();i++){
@@ -2951,7 +2951,6 @@ void Circuit::check_matrix(Matrix &A){
 	}
 	return;
 	
-	return;
 	for(size_t i=0;i<A.size();i++){
 		size_t row = A.Ti[i];
 		size_t col = A.Tj[i];
