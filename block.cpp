@@ -1311,3 +1311,12 @@ void Block::stamp_bd_net(int my_id, Net *net){
 			//clog<<"bd net: "<<id<<" "<<id<<" "<<1.0/net->value<<endl;
 	}
 }
+
+// check if matrix is SPD or not
+void SubCircuit::check_matrix(Matrix &A){
+	size_t count = 0;
+	A.merge();
+	clog<<A.get_row()<<endl;
+	for(size_t i=0;i<A.size();i++){
+		cout<<A.Ti[i]+1<<" "<<A.Tj[i]+1<<" "<<A.Tx[i]<<endl;
+}
