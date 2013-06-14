@@ -52,11 +52,11 @@ public:
 
 	friend class Algebra;
 	friend class Circuit;
-private:
 	vector<long> Ti;
 	vector<long> Tj;
 	vector<double> Tx;
 	long row;
+private:
 };
 
 inline long Triplet::get_row() const{

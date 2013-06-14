@@ -50,7 +50,6 @@ public:
 	void copy_array(double *x_old, double *xp);
 	void build_nd_IdMap();
 	void stamp_matrix(int &my_id, MPI_CLASS &mpi_class);	
-	void check_matrix(Matrix &A);
 	void stamp_matrix_tr(int &my_id, MPI_CLASS &mpi_class, Tran &tran);
 	void stamp_resistor(int &my_id, Net * net);
 	void stamp_resistor_tr(int &my_id, Net * net);

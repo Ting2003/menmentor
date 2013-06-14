@@ -297,6 +297,113 @@ void Circuit::print_matlab(Matrix A){
 		printf("%ld %ld %.5e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
 	}
 }
+
+void Circuit::print_matrix(Matrix A){
+	bool DEBUG_flag = true;
+	// uncomment this if want to output to a file
+	stringstream ss;
+	ss<<"OUTPUT_TRI/b2r_"<<name<<"_A.txt";
+	clog<<"print file name: "<<ss.str()<<endl;
+	// # build matrix merge map
+	pair<long, long> index_pair;
+	map<pair<long, long>, double> matrix_map;
+	A.merge_matrix(matrix_map);
+	
+	size_t count = 0;
+	map<pair<long, long>, double>::iterator it;
+	for(it = matrix_map.begin(); it != matrix_map.end(); it++){
+		count++;
+	}
+
+	//A.merge();
+	FILE *f;
+	f = fopen(ss.str().c_str(),"w");
+
+# if 1
+	// print title line
+	fprintf(f, "\%\%MatrixMarket matrix coordinate real general\n");
+	size_t num_nnz = (count-A.get_row())*2 + A.get_row();
+	// print 1st line
+	fprintf(f, "%d %d %d\n", A.get_row(), A.get_row(), num_nnz);
+# endif
+#if 0
+	fprintf(f, "\%%MatrixMarket matrix coordinate real symmetric\n");
+	fprintf(f, "%d %d %d\n", A.get_row(), A.get_row(), count);
+# endif
+	for(it = matrix_map.begin(); it != matrix_map.end(); it++){
+		fprintf(f, "%d %d %.10e\n", it->first.first+1, it->first.second+1, 
+			it->second);
+# if 1
+		/*if(it->first.first == it->first.second)
+			fprintf(f, "%d %d %.10e\n", it->first.second+1, 
+				it->first.first+1, it->second+1e-5);
+		else
+			fprintf(f, "%d %d %.10e\n", it->first.first+1, it->first.second+1, 
+				it->second);
+		*/
+
+		if(it->first.first != it->first.second)
+			fprintf(f, "%d %d %.10e\n", it->first.second+1, 
+				it->first.first+1, it->second);
+# endif
+
+	}
+#if 0	// don't output ground node
+	for(size_t i=0;i<A.size();i++){
+		fprintf(f, "%d %d %.10e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
+# if DEBUG_flag
+		if(A.Ti[i] != A.Tj[i])
+			fprintf(f, "%d %d %.10e\n", A.Tj[i]+1, A.Ti[i]+1, A.Tx[i]);
+# endif
+	}
+#endif
+	fclose(f);
+	matrix_map.clear();
+}
+
+void Circuit::print_rhs(){
+	// uncomment this if want to output to a file
+	stringstream ss;
+	ss<<"OUTPUT_TRI/b2r_"<<name<<"_b.txt";
+	clog<<"print file name: "<<ss.str()<<endl;
+	FILE *f;
+	f = fopen(ss.str().c_str(),"w");
+	// print title line
+	fprintf(f, "\%\%MatrixMarket matrix array real general\n");
+	/*size_t count = 0;
+	for(size_t i=0;i<block_info.count;i++)
+		if(block_info.bnewp[i] !=0)
+			count++;
+	clog<<"count: "<<count<<endl;*/
+	// print 1st line
+	fprintf(f, "%d %d\n", block_vec[0]->count, 1);
+
+	// don't output ground node
+	for(size_t i=0;i<block_vec[0]->count;i++){
+		fprintf(f, "%.10e\n", block_vec[0]->bnewp[i]);
+	}
+	fclose(f);
+}
+
+void Circuit::print_solution(){
+	// uncomment this if want to output to a file
+	stringstream ss;
+	ss<<"OUTPUT_TRI/b2r_"<<name<<"_x.txt";
+	clog<<"print file name: "<<ss.str()<<endl;
+	FILE *f;
+	f = fopen(ss.str().c_str(),"w");
+	// print title line
+	fprintf(f, "\%\%MatrixMarket matrix array real general\n");
+	// print 1st line
+	fprintf(f, "%d %d %d\n", block_vec[0]->count, 1, block_vec[0]->count);
+
+	// don't output ground node
+	for(size_t i=0;i<block_vec[0]->count;i++){
+		fprintf(f, "%d %.10e\n", i+1, block_vec[0]->xp[i]);
+	}
+	fclose(f);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Computation Functions
 
@@ -404,6 +511,7 @@ void Circuit::block_init(int &my_id, MPI_CLASS &mpi_class){
 		// copy_node_voltages_block();
 		block_vec[i]->stamp_matrix(my_id, mpi_class);
 	}
+	
 }
 #if 0
 // stamp the nets by sets, block version
@@ -563,6 +671,11 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
+ //#if 0	
+	print_matrix(block_vec[0]->A);
+	print_rhs();
+	print_solution();
+ //#endif
 	// cout<<nodelist;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;
@@ -602,7 +715,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    	Lx = static_cast<double*> (block_info.L->x);
    	Li = static_cast<int*>(block_info.L->i) ;
    	Lnz = static_cast<int *>(block_info.L->nz); */
-   		block_vec[i]->clear_A(); //A.clear();
+//#if 0   
+		block_vec[i]->clear_A();
+//#endif
 		// bnewp = bp
 		block_vec[i]->copy_vec(block_vec[i]->bnewp,
 				block_vec[i]->bp);
@@ -2910,6 +3025,8 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	if(my_id==0)	reorder_bd_x_g(mpi_class);
 
 	double time=0;
+	clock_t start_e, end_e;
+	start_e = clock();
 	double t1= MPI_Wtime();
 	while( iter < MAX_ITERATION ){
 		diff = solve_iteration(my_id, iter, num_procs, mpi_class);
@@ -2921,8 +3038,10 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 			break;
 		}
 	}
+	end_e = clock();
 	double t2 = MPI_Wtime();
 	time = t2-t1;
+	double c_time = 1.0*(end_e-start_e)/CLOCKS_PER_SEC;
 	// copy the values from replist to nodelist
 	for(size_t i=0;i<nodelist.size()-1;i++){
 		Node *nd = nodelist[i];
@@ -2930,7 +3049,9 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 			nd->value = nd->rep->value;
 	}
 	if(my_id==0){
-		clog<<"solve DC cost: "<<time<<" secs."<<endl;
+		clog<<"DC iter: "<<iter<<endl;
+		clog<<"solve DC cost (mpi): "<<time<<" secs."<<endl;
+		clog<<"solve DC cost (c_time): "<<1.0*(end_e-start_e)/CLOCKS_PER_SEC<<" secs. "<<endl;
 	}
 	// get_voltages_from_block_LU_sol();
 	// if(my_id==0)
