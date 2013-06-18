@@ -23,7 +23,10 @@ using namespace std;
 Parser::Parser(vector<Circuit*> * ckts):p_ckts(ckts){
 }
 
-Parser::~Parser(){ }
+Parser::~Parser(){ 
+	x_list.clear();
+	y_list.clear();
+}
 
 // node234_2_3_4 
 // name_z_x_y
@@ -325,8 +328,9 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	// processor 0 will extract layer info
 	// and bcast it into other processor
 	vector<CKT_NAME >ckt_name_vec;
-	if(my_id==0)
+	if(my_id==0){
 		extract_ckt_name(my_id, ckt_name_vec, mpi_class, tran);
+	}
 	// broadcast info for transient 
 	
 	int ckt_name_size = ckt_name_vec.size();
@@ -346,7 +350,11 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	}*/
 	// first time parse:
 	create_circuits(ckt_name_vec);
-	
+	if(my_id ==0){
+		clog<<"before pre partitioning. "<<endl;
+		pre_partition(my_id, mpi_class, tran);	
+	}
+	return;	
 	// if(my_id==0) clog<<"after create circuits"<<endl;
 
 	build_block_geo(my_id, mpi_class, tran, num_procs);
@@ -1121,3 +1129,330 @@ bool Parser::map_net_x(Net *net){
 	}
 }
 #endif
+ 
+void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran){
+	char line[MAX_BUF];
+	// processing original input file
+	FILE *f = NULL;
+	f = fopen(filename, "r");
+	if(f==NULL) report_exit("Input file not exist!\n");	
+
+	char type;
+	while( fgets(line, MAX_BUF,f)!=NULL){
+		type = line[0];
+		//clog<<line<<endl;
+		switch(type){
+			case 'r': // resistor
+			case 'R':
+			case 'v': // VDD
+			case 'V':
+			case 'i': // current
+			case 'I':
+			case 'c':
+			case 'C':
+			case 'l':
+			case 'L':
+				pre_insert_net_node(line, my_id, mpi_class);
+				break;
+			case '.': // parse tran nodes: need to write
+				 // block_parse_dots(line, tran, my_id); 
+				 // break;
+			case '*': // comment
+			case ' ':
+			case '\n':
+				break;
+			default:
+				printf("Unknown input line: ");
+				report_exit(line);
+				break;
+		}
+	}	
+
+	fclose(f);
+
+	// release map_node resource
+	for(size_t i=0;i<(*p_ckts).size();i++){
+		Circuit * ckt = (*p_ckts)[i];
+		if(ckt->map_node.size()>0)
+			ckt->map_node.clear();	
+		// ckt->pre_release_circuit();
+		// ckt->~Circuit();
+	}
+	
+	Node *nd;
+	// all the ckts together
+	// now have the nodes and nets info
+	for(size_t i=0;i<(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		for(size_t j=0;j<ckt->nodelist.size();j++){
+			nd = ckt->nodelist[j];
+			if(nd->is_ground())
+				continue;
+			x_list.push_back(nd->pt.x);
+			y_list.push_back(nd->pt.y);
+			// cout<<"i, node, x, y: "<<i<<" "<<*nd<<" "<<nd->pt<<" "<<nd->pt.x<<" "<<nd->pt.y<<endl;
+		}
+		// build ckt->x_list_nd_map
+		for(size_t j=0;j<x_list.size();j++){
+			ckt->x_list_nd_map[x_list[j]] ++;	
+		}
+		// build ckt->x_list_nd_map
+		for(size_t j=0;j<y_list.size();j++){
+			ckt->y_list_nd_map[y_list[j]] ++;	
+		}
+
+		std::sort(x_list.begin(), x_list.end());
+		std::sort(y_list.begin(), y_list.end());
+		vector<long>::iterator it_vec;
+		it_vec = std::unique(x_list.begin(), x_list.end());
+		x_list.resize(std::distance(x_list.begin(), it_vec));
+	
+		it_vec = std::unique(y_list.begin(), y_list.end());
+		y_list.resize(std::distance(y_list.begin(), it_vec));
+
+		// clog<<"x_list size: "<<x_list.size()<<endl;
+		// clog<<"y_list size: "<<y_list.size()<<endl;	
+		// now build x/y_list idmap
+		map<long, int> x_list_id_map;
+		map<long, int> y_list_id_map;
+		for(size_t j=0;j<x_list.size();j++)
+			x_list_id_map[x_list[j]] = j;
+	
+		for(size_t j=0;j<y_list.size();j++)
+			y_list_id_map[y_list[j]] = j;
+		
+#if 0
+		for(size_t i=0;i<x_list.size();i++){
+			cout<<"i, x_list: "<<i<<" "<<x_list[i]<<endl;
+		}
+		for(size_t i=0;i<y_list.size();i++){
+			cout<<"i, y_list: "<<i<<" "<<y_list[i]<<endl;
+		}
+#endif
+
+// #if 0	
+		// then accumulate the count
+		// map<long, int> x_list_map;
+		// map<long, int> y_list_map;
+		Net *net;
+		Node *na, *nb;
+		long x1, x2, y1, y2;
+		// only explore resistor net
+		int type_r = RESISTOR;
+		// for(size_t i=0;i<(*p_ckts).size();i++){
+			// Circuit *ckt = (*p_ckts)[i];
+		NetList &ns = ckt->net_set[type_r];
+		// clog<<"ckt net.size: "<<ckt->get_name()<<" "<<ns.size()<<endl;
+		for(size_t k=0;k<ns.size();k++){
+			na = ns[k]->ab[0]->rep;
+			nb = ns[k]->ab[1]->rep;
+			if(na->is_ground() || nb->is_ground())
+				continue;
+			x1 = na->pt.x;
+			x2 = nb->pt.x;
+			// x1 point to smaller one
+			if(x1 > x2){
+				x1 = nb->pt.x;
+				x2 = na->pt.x;
+			}
+			
+			y1 = na->pt.y;
+			y2 = nb->pt.y;
+			if(y1 > y2){
+				y1 = nb->pt.y;
+				y2 = na->pt.y;
+			}
+			
+			// clog<<"net: "<<*ns[k]<<endl;
+			int id_1 = x_list_id_map[x1];
+			int id_2 = x_list_id_map[x2];
+			// clog<<"id_1, id_2: "<<id_1<<" "<<id_2<<endl;
+			// map +1
+			for(size_t l = id_1;l<=id_2;l++){
+				// clog<<"i, x_list, x1, x2: "<<l<<" "<<x_list[l]<<" "<<x1<<" "<<x2<<endl;
+				ckt->x_list_bd_map[x_list[l]]++;	
+			}
+			
+			id_1 = y_list_id_map[y1];
+			id_2 = y_list_id_map[y2];
+			// map +1
+			for(size_t l = id_1;l <= id_2;l++){
+				ckt->y_list_bd_map[y_list[l]]++;	
+			}
+		}
+#if 0		
+		clog<<"start to output x and y list. "<<endl;
+		// scan the nets to count bd nets 
+		map<long, int>::iterator it;
+		for(it = ckt->x_list_bd_map.begin();it != ckt->x_list_bd_map.end();it++){
+			cout<<"ckt, x, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
+		}
+		cout<<endl;
+		for(it = ckt->y_list_bd_map.begin();it != ckt->y_list_bd_map.end();it++){
+			cout<<"ckt, y, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
+		}
+#endif
+		x_list_id_map.clear();
+		y_list_id_map.clear();
+		x_list.clear();
+		y_list.clear();
+	}
+// #endif
+	// clog<<"after release ckt: "<<(*p_ckts).size()<<endl;	
+}// end of parse
+
+// given a line, extract net and node information
+void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
+	char *chs, *saveptr;
+	const char* sep = " (),\n";
+
+	static char sname[MAX_BUF];
+	static char sa[MAX_BUF];
+	static char sb[MAX_BUF];
+	
+	static char star[MAX_BUF];
+	static char coord1[MAX_BUF];
+	static char coord2[MAX_BUF];
+	static Node nd[2];
+	Node * nd_ptr[2];	// this will be set to the two nodes found
+	double value;
+	int count=0;
+	
+	char *chs_1;
+	char *saveptr_1;
+	const char *sep_1 = "_";
+	// find grid boundary x and y
+	sscanf(line, "%s %s %s", sname,sa,sb);
+	// if(my_id==1)
+		// clog<<"block 1 line, sa, sb: "<<line<<" "<<sa<<" "<<sb<<endl;
+	if(sa[0] == '0' || sb[0] == '0'){
+	// if(sa == "0" || sb == "0"){
+		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
+		// copy string
+		strcpy(coord2, coord1);
+		// clog<<"coord1, coord2: "<<coord1<<" "<<coord2<<endl;
+		// coord2 = coord1;
+	}
+	else 
+		sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, star, coord1, coord2);
+
+	// net type
+	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
+	// ckt name
+	chs_1 = strtok_r(NULL, sep_1, &saveptr_1);
+	string ckt_name(chs_1);
+	// ckt_name.append(chs_1);
+	
+	extract_node(sa, nd[0], coord1);
+	extract_node(sb, nd[1], coord2);
+	//clog<<"after extract nodes. "<<endl;
+
+	int ckt_id = 0;
+ 	for(size_t i=0;i<(*p_ckts).size();i++){
+		if((*p_ckts)[i]->name == ckt_name){
+			ckt_id = i;
+			break;
+		}
+	}
+	Circuit * ckt = (*p_ckts)[ckt_id];
+
+	// cout<<endl<<"ckt, line: "<<ckt->name<<" "<<line;	
+	for(int i=0;i<2;i++){
+		if ( nd[i].is_ground() ){
+			nd_ptr[i] = ckt->nodelist[0]; // ground node
+		}
+		else if ( (nd_ptr[i] = ckt->get_node(nd[i].name) ) == NULL ){
+			// create new node and insert
+			nd_ptr[i] = new Node(nd[i]); // copy constructor
+			
+			nd_ptr[i]->ckt_name = ckt_name;
+			nd_ptr[i]->rep = nd_ptr[i];  // set rep to be itself
+			ckt->add_node(nd_ptr[i]);
+			// cout<<"ckt, add_node: "<<ckt->get_name()<<" "<<*nd_ptr[i]<<endl;
+		}
+	}	
+	
+	NET_TYPE net_type = RESISTOR;
+	// find net type
+	switch(sname[0]){
+	case 'r': // resistor
+	case 'R':
+		net_type = RESISTOR;
+		break;
+	case 'v': // VDD
+	case 'V':
+		net_type = VOLTAGE;
+		break;
+	case 'i': // current
+	case 'I':
+		net_type = CURRENT;
+		break;
+	case 'c': // capacitance
+	case 'C':
+		net_type = CAPACITANCE;
+		break;
+	case 'l':
+	case 'L':
+		net_type = INDUCTANCE;
+		break;
+	default:
+		report_exit("Invalid net type!\n");
+		break;
+	}
+
+	
+		// create a Net
+	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
+
+#if 0
+	if(net_type == CURRENT){
+		cout<<"to current net. "<<endl;
+		net->tr = new double [7];
+		// assign pulse paramter for pulse input
+		chs = strtok_r(line, sep, &saveptr);
+		for(int i=0;i<3;i++)
+			chs = strtok_r(NULL, sep, &saveptr);
+		if(chs != NULL){
+			clog<<"chs: "<<chs<<endl;
+			chs = strtok_r(NULL, sep, &saveptr);
+			}
+		if(chs != NULL){
+			chs = strtok_r(NULL, sep, &saveptr);
+			// V1
+			net->tr[0] = atof(chs);
+			chs = strtok_r(NULL, sep, &saveptr);
+			// V2
+			net->tr[1] = atof(chs);
+			chs = strtok_r(NULL, sep, &saveptr);
+			// TD
+			net->tr[2] = atof(chs);
+			chs = strtok_r(NULL, sep, &saveptr);
+			// Tr
+			net->tr[3] = atof(chs);
+			chs = strtok_r(NULL, sep, &saveptr);
+			// Tf
+			net->tr[4] = atof(chs);
+			chs = strtok_r(NULL, sep, &saveptr);
+			// PW
+			net->tr[5] = atof(chs);
+			chs = strtok_r(NULL, sep, &saveptr);
+			// Period
+			net->tr[6] = atof(chs);
+		}
+	}
+#endif
+	// trick: when the value of a resistor via is below a threshold,
+	// treat it as a 0-voltage via
+	//if( Circuit::MODE == (int)IT ) {
+		// try_change_via(net);
+	//}
+
+	// insert this net into circuit
+	ckt->add_net(net);
+	// IMPORTANT: set the relationship between node and net
+	// update node voltage if it is an X node
+	// set node to be X node if it connects to a voltage source
+	update_node(net);
+}
+
+

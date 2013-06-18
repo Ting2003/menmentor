@@ -20,7 +20,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-using std::vector;
+using namespace std;
 
 struct CKT_NAME{
 	char name[10];
@@ -79,10 +79,13 @@ public:
 	void InitialOF(vector<FILE *> & of, int &num_blocks, int &color);
 
 	void InitialIF(vector<FILE *> & ifs, int &my_id, int &block_size, int &color);
+	void pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran);
 	
 	bool map_res_net(Net*net);
 	bool map_net_x(Net *net);
 	bool map_net_y(Net *net);
+	vector<long> x_list;
+	vector<long> y_list;
 private:
 	int create_circuits(vector<CKT_NAME> &ckt_name_info);		// parse the file and create circuits
 
@@ -94,6 +97,7 @@ private:
 
 	//void insert_net_node(string line);
 	void insert_net_node(char * line, int &count, MPI_CLASS &mpi_class);
+	void pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class);
 	void extract_node(char * str, Node & nd, char *coord);
 	void update_node(Net * net);
 

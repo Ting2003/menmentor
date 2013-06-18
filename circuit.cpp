@@ -82,10 +82,34 @@ Circuit::Circuit(string _name):name(_name),
 	block_size=0;
 }
 
+// relase resources in pre partition 
+void Circuit::pre_release_circuit(){
+	// delete node
+	for(size_t i=0;i<nodelist.size();i++){
+		nodelist[i]->nbr_vec.clear();
+		 delete nodelist[i];
+	}
+
+	// delete node
+	for(size_t i=0;i<replist.size();i++) delete replist[i];
+	nodelist.clear();
+	replist.clear();
+	// delete nets
+	for(int type=0;type<NUM_NET_TYPE;type++){
+		NetList & ns = net_set[type];
+		NetList::iterator it;
+		for(it=ns.begin();it!=ns.end();++it)
+			delete *it;
+	}
+}
+
 // Trick: do not release memory to increase runtime
 Circuit::~Circuit(){
 	// delete node
-	for(size_t i=0;i<nodelist.size();i++) delete nodelist[i];
+	for(size_t i=0;i<nodelist.size();i++){
+		nodelist[i]->nbr_vec.clear();
+		 delete nodelist[i];
+	}
 	// delete node
 	for(size_t i=0;i<replist.size();i++) delete replist[i];
 	// delete node
@@ -250,7 +274,7 @@ void Circuit::sort_internal_nodes(int &my_id){
 string Circuit::get_name() const{return this->name;}
 
 ostream & operator << (ostream & os, const NodePtrVector & nodelist){
-	for(size_t i=0;i<nodelist.size()-1;i++)
+	for(size_t i=0;i<nodelist.size();i++)
 		os<<*nodelist[i]<<endl;
 	return os;
 }
@@ -671,11 +695,11 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}*/
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
- //#if 0	
+ #if 0	
 	print_matrix(block_vec[0]->A);
 	print_rhs();
 	print_solution();
- //#endif
+ #endif
 	// cout<<nodelist;
 	/*if(my_id==0)
 		cout<<nodelist<<endl;

@@ -123,7 +123,8 @@ int main(int argc, char * argv[]){
 	// after parsing, this mem can be released
 	t2=clock();
 	if(my_id==0) clog<<"Parse time="<<1.0*(t2-t1)/CLOCKS_PER_SEC<<endl;
-	
+
+	return 0;	
 	double mpi_t11, mpi_t12;
 	mpi_t11 = MPI_Wtime();
 //#if 0	

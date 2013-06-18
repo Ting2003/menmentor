@@ -61,6 +61,8 @@ class Circuit{
 public:
 	Circuit(string name="");
 	~Circuit();
+	
+	void pre_release_circuit();
 	void check_sys() const;
 	friend class Block;
 	// can be written as inline to speed up
@@ -351,6 +353,10 @@ private:
 	NodePtrVector nodelist;		// a set of nodes
 	NodePtrVector replist;		// a set of representative nodes
 	NodePtrVector mergelist;	// nodes for merging
+	map<long, int> x_list_bd_map;
+	map<long, int> y_list_bd_map;
+	map<long, int> x_list_nd_map;
+	map<long, int> y_list_nd_map;
 
 	// bd_netlist does not belong to net_set
 	NetPtrVector bd_netlist;	
