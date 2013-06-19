@@ -1178,126 +1178,9 @@ void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran){
 		// ckt->pre_release_circuit();
 		// ckt->~Circuit();
 	}
-	
-	Node *nd;
-	// all the ckts together
-	// now have the nodes and nets info
-	for(size_t i=0;i<(*p_ckts).size();i++){
-		Circuit *ckt = (*p_ckts)[i];
-		for(size_t j=0;j<ckt->nodelist.size();j++){
-			nd = ckt->nodelist[j];
-			if(nd->is_ground())
-				continue;
-			x_list.push_back(nd->pt.x);
-			y_list.push_back(nd->pt.y);
-			// cout<<"i, node, x, y: "<<i<<" "<<*nd<<" "<<nd->pt<<" "<<nd->pt.x<<" "<<nd->pt.y<<endl;
-		}
-		// build ckt->x_list_nd_map
-		for(size_t j=0;j<x_list.size();j++){
-			ckt->x_list_nd_map[x_list[j]] ++;	
-		}
-		// build ckt->x_list_nd_map
-		for(size_t j=0;j<y_list.size();j++){
-			ckt->y_list_nd_map[y_list[j]] ++;	
-		}
-
-		std::sort(x_list.begin(), x_list.end());
-		std::sort(y_list.begin(), y_list.end());
-		vector<long>::iterator it_vec;
-		it_vec = std::unique(x_list.begin(), x_list.end());
-		x_list.resize(std::distance(x_list.begin(), it_vec));
-	
-		it_vec = std::unique(y_list.begin(), y_list.end());
-		y_list.resize(std::distance(y_list.begin(), it_vec));
-
-		// clog<<"x_list size: "<<x_list.size()<<endl;
-		// clog<<"y_list size: "<<y_list.size()<<endl;	
-		// now build x/y_list idmap
-		map<long, int> x_list_id_map;
-		map<long, int> y_list_id_map;
-		for(size_t j=0;j<x_list.size();j++)
-			x_list_id_map[x_list[j]] = j;
-	
-		for(size_t j=0;j<y_list.size();j++)
-			y_list_id_map[y_list[j]] = j;
-		
-#if 0
-		for(size_t i=0;i<x_list.size();i++){
-			cout<<"i, x_list: "<<i<<" "<<x_list[i]<<endl;
-		}
-		for(size_t i=0;i<y_list.size();i++){
-			cout<<"i, y_list: "<<i<<" "<<y_list[i]<<endl;
-		}
-#endif
-
-// #if 0	
-		// then accumulate the count
-		// map<long, int> x_list_map;
-		// map<long, int> y_list_map;
-		Net *net;
-		Node *na, *nb;
-		long x1, x2, y1, y2;
-		// only explore resistor net
-		int type_r = RESISTOR;
-		// for(size_t i=0;i<(*p_ckts).size();i++){
-			// Circuit *ckt = (*p_ckts)[i];
-		NetList &ns = ckt->net_set[type_r];
-		// clog<<"ckt net.size: "<<ckt->get_name()<<" "<<ns.size()<<endl;
-		for(size_t k=0;k<ns.size();k++){
-			na = ns[k]->ab[0]->rep;
-			nb = ns[k]->ab[1]->rep;
-			if(na->is_ground() || nb->is_ground())
-				continue;
-			x1 = na->pt.x;
-			x2 = nb->pt.x;
-			// x1 point to smaller one
-			if(x1 > x2){
-				x1 = nb->pt.x;
-				x2 = na->pt.x;
-			}
-			
-			y1 = na->pt.y;
-			y2 = nb->pt.y;
-			if(y1 > y2){
-				y1 = nb->pt.y;
-				y2 = na->pt.y;
-			}
-			
-			// clog<<"net: "<<*ns[k]<<endl;
-			int id_1 = x_list_id_map[x1];
-			int id_2 = x_list_id_map[x2];
-			// clog<<"id_1, id_2: "<<id_1<<" "<<id_2<<endl;
-			// map +1
-			for(size_t l = id_1;l<=id_2;l++){
-				// clog<<"i, x_list, x1, x2: "<<l<<" "<<x_list[l]<<" "<<x1<<" "<<x2<<endl;
-				ckt->x_list_bd_map[x_list[l]]++;	
-			}
-			
-			id_1 = y_list_id_map[y1];
-			id_2 = y_list_id_map[y2];
-			// map +1
-			for(size_t l = id_1;l <= id_2;l++){
-				ckt->y_list_bd_map[y_list[l]]++;	
-			}
-		}
-#if 0		
-		clog<<"start to output x and y list. "<<endl;
-		// scan the nets to count bd nets 
-		map<long, int>::iterator it;
-		for(it = ckt->x_list_bd_map.begin();it != ckt->x_list_bd_map.end();it++){
-			cout<<"ckt, x, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
-		}
-		cout<<endl;
-		for(it = ckt->y_list_bd_map.begin();it != ckt->y_list_bd_map.end();it++){
-			cout<<"ckt, y, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
-		}
-#endif
-		x_list_id_map.clear();
-		y_list_id_map.clear();
-		x_list.clear();
-		y_list.clear();
-	}
-// #endif
+	build_x_y_list_map();	
+	// then explore the partition with no overlap
+	explore_partition(); 	
 	// clog<<"after release ckt: "<<(*p_ckts).size()<<endl;	
 }// end of parse
 
@@ -1455,4 +1338,142 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	update_node(net);
 }
 
+// build the statistic info for x and y dir
+void Parser::build_x_y_list_map(){
+	Node *nd;
+	// all the ckts together
+	// now have the nodes and nets info
+	for(size_t i=0;i<(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		for(size_t j=0;j<ckt->nodelist.size();j++){
+			nd = ckt->nodelist[j];
+			if(nd->is_ground())
+				continue;
+			x_list.push_back(nd->pt.x);
+			y_list.push_back(nd->pt.y);
+			// cout<<"i, node, x, y: "<<i<<" "<<*nd<<" "<<nd->pt<<" "<<nd->pt.x<<" "<<nd->pt.y<<endl;
+		}
+		// build ckt->x_list_nd_map
+		for(size_t j=0;j<x_list.size();j++){
+			ckt->x_list_nd_map[x_list[j]] ++;	
+		}
+		// build ckt->x_list_nd_map
+		for(size_t j=0;j<y_list.size();j++){
+			ckt->y_list_nd_map[y_list[j]] ++;	
+		}
 
+		std::sort(x_list.begin(), x_list.end());
+		std::sort(y_list.begin(), y_list.end());
+		vector<long>::iterator it_vec;
+		it_vec = std::unique(x_list.begin(), x_list.end());
+		x_list.resize(std::distance(x_list.begin(), it_vec));
+	
+		it_vec = std::unique(y_list.begin(), y_list.end());
+		y_list.resize(std::distance(y_list.begin(), it_vec));
+
+		// clog<<"x_list size: "<<x_list.size()<<endl;
+		// clog<<"y_list size: "<<y_list.size()<<endl;	
+		// now build x/y_list idmap
+		map<long, int> x_list_id_map;
+		map<long, int> y_list_id_map;
+		for(size_t j=0;j<x_list.size();j++)
+			x_list_id_map[x_list[j]] = j;
+	
+		for(size_t j=0;j<y_list.size();j++)
+			y_list_id_map[y_list[j]] = j;
+		
+#if 0
+		for(size_t i=0;i<x_list.size();i++){
+			cout<<"i, x_list: "<<i<<" "<<x_list[i]<<endl;
+		}
+		for(size_t i=0;i<y_list.size();i++){
+			cout<<"i, y_list: "<<i<<" "<<y_list[i]<<endl;
+		}
+#endif
+
+// #if 0	
+		// then accumulate the count
+		// map<long, int> x_list_map;
+		// map<long, int> y_list_map;
+		Net *net;
+		Node *na, *nb;
+		long x1, x2, y1, y2;
+		// only explore resistor net
+		int type_r = RESISTOR;
+		// for(size_t i=0;i<(*p_ckts).size();i++){
+			// Circuit *ckt = (*p_ckts)[i];
+		NetList &ns = ckt->net_set[type_r];
+		// clog<<"ckt net.size: "<<ckt->get_name()<<" "<<ns.size()<<endl;
+		for(size_t k=0;k<ns.size();k++){
+			na = ns[k]->ab[0]->rep;
+			nb = ns[k]->ab[1]->rep;
+			if(na->is_ground() || nb->is_ground())
+				continue;
+			x1 = na->pt.x;
+			x2 = nb->pt.x;
+			// x1 point to smaller one
+			if(x1 > x2){
+				x1 = nb->pt.x;
+				x2 = na->pt.x;
+			}
+			
+			y1 = na->pt.y;
+			y2 = nb->pt.y;
+			if(y1 > y2){
+				y1 = nb->pt.y;
+				y2 = na->pt.y;
+			}
+			
+			// clog<<"net: "<<*ns[k]<<endl;
+			int id_1 = x_list_id_map[x1];
+			int id_2 = x_list_id_map[x2];
+			// clog<<"id_1, id_2: "<<id_1<<" "<<id_2<<endl;
+			// map +1
+			for(size_t l = id_1;l<=id_2;l++){
+				// clog<<"i, x_list, x1, x2: "<<l<<" "<<x_list[l]<<" "<<x1<<" "<<x2<<endl;
+				ckt->x_list_bd_map[x_list[l]]++;	
+			}
+			
+			id_1 = y_list_id_map[y1];
+			id_2 = y_list_id_map[y2];
+			// map +1
+			for(size_t l = id_1;l <= id_2;l++){
+				ckt->y_list_bd_map[y_list[l]]++;	
+			}
+		}
+#if 0		
+		clog<<"start to output x and y list. "<<endl;
+		// scan the nets to count bd nets 
+		map<long, int>::iterator it;
+		for(it = ckt->x_list_bd_map.begin();it != ckt->x_list_bd_map.end();it++){
+			cout<<"ckt, x, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
+		}
+		cout<<endl;
+		for(it = ckt->y_list_bd_map.begin();it != ckt->y_list_bd_map.end();it++){
+			cout<<"ckt, y, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
+		}
+#endif
+		x_list_id_map.clear();
+		y_list_id_map.clear();
+		x_list.clear();
+		y_list.clear();
+	}
+// #endif
+}
+
+// explore the partitions with x_y_list_map
+void Parser::explore_partition(){
+	// assume the maximum cores are 8
+	Core_x = 8;
+	Core_y = 8;
+	int num_cores=0;
+	for(int i=0;i<Core_x;i++){
+		for(int j=0;j<Core_y;j++){
+			num_cores = i*j;
+			// generate the combination
+			if(num_cores == 1 || num_cores > Core_x)
+				continue;
+			// for each of the partition, statistically calc the bd nets and so on	
+		}
+	}
+}

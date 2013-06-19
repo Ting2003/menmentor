@@ -80,12 +80,17 @@ public:
 
 	void InitialIF(vector<FILE *> & ifs, int &my_id, int &block_size, int &color);
 	void pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran);
+	void build_x_y_list_map();
+	void explore_partition();
 	
 	bool map_res_net(Net*net);
 	bool map_net_x(Net *net);
 	bool map_net_y(Net *net);
 	vector<long> x_list;
 	vector<long> y_list;
+	// record the number of x and y processors tried
+	int Core_x;
+	int Core_y;	
 private:
 	int create_circuits(vector<CKT_NAME> &ckt_name_info);		// parse the file and create circuits
 
