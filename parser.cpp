@@ -1487,10 +1487,14 @@ void Parser::explore_partition(int num_procs){
 	Core_x = core_limit;
 	Core_y = core_limit;
 	int num_cores=0;
+	x_coord_vec.resize((*p_ckts).size());
+	y_coord_vec.resize((*p_ckts).size());
+	x_bd_vec.resize((*p_ckts).size());
+	y_bd_vec.resize((*p_ckts).size());
 	// first need to fix the number of partitions
 	// based on number of boundary nets
-	//for(int i=0;i<Core_x;i++){
-		int i=1;{
+	for(int i=0;i<Core_x;i++){
+		//int j=1;{
 		for(int j=0;j<Core_y;j++){
 			num_cores = i*j;
 			// generate the combination
@@ -1502,6 +1506,29 @@ void Parser::explore_partition(int num_procs){
 			explore_one_partition_balance(i, j);	
 		}
 	}
+
+	// find out whether worth doing x or y partition
+	for(size_t i=0;i<(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		// compare the avg value of x_bd_vec and y_bd_vec
+		double avg_x_bd = 0;
+		for(size_t j=0;j<x_bd_vec[i].size();j++)
+			avg_x_bd += x_bd_vec[i][j];
+		if(x_bd_vec[i].size()!=0)
+			avg_x_bd /= x_bd_vec[i].size();
+		double avg_y_bd = 0;
+		for(size_t j=0;j<y_bd_vec[i].size();j++)
+			avg_y_bd += y_bd_vec[i][j];
+		if(y_bd_vec[i].size()!=0)
+			avg_y_bd /= y_bd_vec[i].size();
+		cout<<"ckt, avg_x_bd and y_bd: "<<ckt->get_name()<<" "<<avg_x_bd<<" "<<avg_y_bd<<endl;
+		if(avg_x_bd > 3*avg_y_bd)
+			cout<<"only doing y partition. "<<endl;
+		else if(avg_y_bd > 3*avg_x_bd)
+			cout<<"only doing x partition. "<<endl;
+		else
+			cout<<"doing both x and y partition. "<<endl;
+	}
 }
 
 // explore one partition: X x Y
@@ -1512,15 +1539,18 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 	size_t num_nodes = 0;
 	size_t num_nodes_x = 0;
 	size_t num_nodes_y = 0;
+	// only compare x or y direction
+	if(x_blocks > 1 && y_blocks > 1)
+		return;
 	for(int i=0;i<(*p_ckts).size();i++){
 		Circuit *ckt = (*p_ckts)[i];
 		num_nodes = ckt->nodelist.size()-1;
 		num_nodes_x = num_nodes / x_blocks;
 		num_nodes_y = num_nodes / y_blocks;
-		vector<long> x_coord_vec;
+		/*vector<long> x_coord_vec;
 		vector<long> x_bd_vec;
 		vector<long> y_coord_vec;
-		vector<long> y_bd_vec;
+		vector<long> y_bd_vec;*/
 		cout<<"ckt, num_nodes_x, num_nodes_y: "<<ckt->get_name()<<" "<<num_nodes_x<<" "<<num_nodes_y<<endl;
 		size_t sum_nodes_x = 0;
 		size_t sum_nodes_y = 0;
@@ -1548,16 +1578,16 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 						// clog<<"min_bd, coord: "<<min_bd<<" "<<min_coord<<" "<<min_sum_nodes_x<<endl;
 					}
 				}
-				if(sum_nodes_x > thresh_u){// || j == ckt->y_list.size()-1){
-					x_coord_vec.push_back(min_coord);
-					x_bd_vec.push_back(min_bd);
+				if(sum_nodes_x > thresh_u){
+					x_coord_vec[i].push_back(min_coord);
+					x_bd_vec[i].push_back(min_bd);
 					cout<<"x / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_x<<" "<<min_bd<<" "<<min_coord<<endl;
 					min_bd = 0;
 					if(j == ckt->x_list.size()-1)
 						break;
 					// start to search next one
 					j = min_j;
-					sum_nodes_x = 0;	
+					sum_nodes_x = 0;
 				}
 			}
 			// cout<<"x min_bd, min_coord: "<<min_bd<<" "<<min_coord<<endl;
@@ -1588,8 +1618,8 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 					}
 				}
 				if(sum_nodes_y > thresh_u){
-					y_coord_vec.push_back(min_coord);
-					y_bd_vec.push_back(min_bd);
+					y_coord_vec[i].push_back(min_coord);
+					y_bd_vec[i].push_back(min_bd);
 					cout<<"y / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_y<<" "<<min_bd<<" "<<min_coord<<endl;
 					min_bd = 0;
 					if(j == ckt->y_list.size()-1)

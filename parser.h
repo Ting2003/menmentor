@@ -92,7 +92,11 @@ public:
 	// vector<long> y_list;
 	// record the number of x and y processors tried
 	int Core_x;
-	int Core_y;	
+	int Core_y;
+	vector<vector<long> > x_coord_vec;
+	vector<vector<long> > y_coord_vec;
+	vector<vector<long> > x_bd_vec;
+	vector<vector<long> > y_bd_vec;	
 private:
 	int create_circuits(vector<CKT_NAME> &ckt_name_info);		// parse the file and create circuits
 
