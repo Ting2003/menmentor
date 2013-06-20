@@ -353,6 +353,8 @@ private:
 	NodePtrVector nodelist;		// a set of nodes
 	NodePtrVector replist;		// a set of representative nodes
 	NodePtrVector mergelist;	// nodes for merging
+	vector<long> x_list;
+	vector<long> y_list;
 	map<long, int> x_list_bd_map;
 	map<long, int> y_list_bd_map;
 	map<long, int> x_list_nd_map;
@@ -379,6 +381,7 @@ private:
 	// blocks
 	vector<Block*> block_vec;
 	float x_min, y_min, x_max, y_max;
+	long lx, ly, ux, uy;
 
 	// control variables
 	static double EPSILON;

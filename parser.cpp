@@ -24,8 +24,8 @@ Parser::Parser(vector<Circuit*> * ckts):p_ckts(ckts){
 }
 
 Parser::~Parser(){ 
-	x_list.clear();
-	y_list.clear();
+	// x_list.clear();
+	// y_list.clear();
 }
 
 // node234_2_3_4 
@@ -352,7 +352,7 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	create_circuits(ckt_name_vec);
 	if(my_id ==0){
 		clog<<"before pre partitioning. "<<endl;
-		pre_partition(my_id, mpi_class, tran);	
+		pre_partition(my_id, mpi_class, tran, num_procs);	
 	}
 	return;	
 	// if(my_id==0) clog<<"after create circuits"<<endl;
@@ -1130,12 +1130,19 @@ bool Parser::map_net_x(Net *net){
 }
 #endif
  
-void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran){
+void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
 	char line[MAX_BUF];
 	// processing original input file
 	FILE *f = NULL;
 	f = fopen(filename, "r");
 	if(f==NULL) report_exit("Input file not exist!\n");	
+	for(int i=0;i<(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		ckt->lx = -1;
+		ckt->ux = -1;
+		ckt->ly = -1;
+		ckt->uy = -1; 
+	}
 
 	char type;
 	while( fgets(line, MAX_BUF,f)!=NULL){
@@ -1180,7 +1187,7 @@ void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran){
 	}
 	build_x_y_list_map();	
 	// then explore the partition with no overlap
-	explore_partition(); 	
+	explore_partition(num_procs); 	
 	// clog<<"after release ckt: "<<(*p_ckts).size()<<endl;	
 }// end of parse
 
@@ -1238,7 +1245,6 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		}
 	}
 	Circuit * ckt = (*p_ckts)[ckt_id];
-
 	// cout<<endl<<"ckt, line: "<<ckt->name<<" "<<line;	
 	for(int i=0;i<2;i++){
 		if ( nd[i].is_ground() ){
@@ -1247,6 +1253,18 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		else if ( (nd_ptr[i] = ckt->get_node(nd[i].name) ) == NULL ){
 			// create new node and insert
 			nd_ptr[i] = new Node(nd[i]); // copy constructor
+			// extract the boundary for circuit
+			if(nd_ptr[i]->pt.x > ckt->ux)
+				ckt->ux = nd_ptr[i]->pt.x;
+			if(ckt->lx == -1) ckt->lx = ckt->ux;
+			else if(nd_ptr[i]->pt.x>0 && nd_ptr[i]->pt.x <ckt->lx)
+				ckt->lx = nd_ptr[i]->pt.x;
+			if(nd_ptr[i]->pt.y > ckt->uy)
+				ckt->uy = nd_ptr[i]->pt.y;
+			if(ckt->ly == -1) ckt->ly = ckt->uy;
+			else if(nd_ptr[i]->pt.y>0 && nd_ptr[i]->pt.y <ckt->ly)
+				ckt->ly = nd_ptr[i]->pt.y;
+
 			
 			nd_ptr[i]->ckt_name = ckt_name;
 			nd_ptr[i]->rep = nd_ptr[i];  // set rep to be itself
@@ -1349,38 +1367,38 @@ void Parser::build_x_y_list_map(){
 			nd = ckt->nodelist[j];
 			if(nd->is_ground())
 				continue;
-			x_list.push_back(nd->pt.x);
-			y_list.push_back(nd->pt.y);
+			ckt->x_list.push_back(nd->pt.x);
+			ckt->y_list.push_back(nd->pt.y);
 			// cout<<"i, node, x, y: "<<i<<" "<<*nd<<" "<<nd->pt<<" "<<nd->pt.x<<" "<<nd->pt.y<<endl;
 		}
 		// build ckt->x_list_nd_map
-		for(size_t j=0;j<x_list.size();j++){
-			ckt->x_list_nd_map[x_list[j]] ++;	
+		for(size_t j=0;j<ckt->x_list.size();j++){
+			ckt->x_list_nd_map[ckt->x_list[j]] ++;	
 		}
 		// build ckt->x_list_nd_map
-		for(size_t j=0;j<y_list.size();j++){
-			ckt->y_list_nd_map[y_list[j]] ++;	
+		for(size_t j=0;j<ckt->y_list.size();j++){
+			ckt->y_list_nd_map[ckt->y_list[j]] ++;	
 		}
 
-		std::sort(x_list.begin(), x_list.end());
-		std::sort(y_list.begin(), y_list.end());
+		std::sort(ckt->x_list.begin(), ckt->x_list.end());
+		std::sort(ckt->y_list.begin(), ckt->y_list.end());
 		vector<long>::iterator it_vec;
-		it_vec = std::unique(x_list.begin(), x_list.end());
-		x_list.resize(std::distance(x_list.begin(), it_vec));
+		it_vec = std::unique(ckt->x_list.begin(), ckt->x_list.end());
+		ckt->x_list.resize(std::distance(ckt->x_list.begin(), it_vec));
 	
-		it_vec = std::unique(y_list.begin(), y_list.end());
-		y_list.resize(std::distance(y_list.begin(), it_vec));
+		it_vec = std::unique(ckt->y_list.begin(), ckt->y_list.end());
+		ckt->y_list.resize(std::distance(ckt->y_list.begin(), it_vec));
 
 		// clog<<"x_list size: "<<x_list.size()<<endl;
 		// clog<<"y_list size: "<<y_list.size()<<endl;	
 		// now build x/y_list idmap
 		map<long, int> x_list_id_map;
 		map<long, int> y_list_id_map;
-		for(size_t j=0;j<x_list.size();j++)
-			x_list_id_map[x_list[j]] = j;
+		for(size_t j=0;j<ckt->x_list.size();j++)
+			x_list_id_map[ckt->x_list[j]] = j;
 	
-		for(size_t j=0;j<y_list.size();j++)
-			y_list_id_map[y_list[j]] = j;
+		for(size_t j=0;j<ckt->y_list.size();j++)
+			y_list_id_map[ckt->y_list[j]] = j;
 		
 #if 0
 		for(size_t i=0;i<x_list.size();i++){
@@ -1431,14 +1449,14 @@ void Parser::build_x_y_list_map(){
 			// map +1
 			for(size_t l = id_1;l<=id_2;l++){
 				// clog<<"i, x_list, x1, x2: "<<l<<" "<<x_list[l]<<" "<<x1<<" "<<x2<<endl;
-				ckt->x_list_bd_map[x_list[l]]++;	
+				ckt->x_list_bd_map[ckt->x_list[l]]++;	
 			}
 			
 			id_1 = y_list_id_map[y1];
 			id_2 = y_list_id_map[y2];
 			// map +1
 			for(size_t l = id_1;l <= id_2;l++){
-				ckt->y_list_bd_map[y_list[l]]++;	
+				ckt->y_list_bd_map[ckt->y_list[l]]++;	
 			}
 		}
 #if 0		
@@ -1455,25 +1473,193 @@ void Parser::build_x_y_list_map(){
 #endif
 		x_list_id_map.clear();
 		y_list_id_map.clear();
-		x_list.clear();
-		y_list.clear();
+		// x_list.clear();
+		// y_list.clear();
 	}
 // #endif
 }
 
 // explore the partitions with x_y_list_map
-void Parser::explore_partition(){
+// no overlap here
+void Parser::explore_partition(int num_procs){
+	int core_limit = 8;//num_procs;
 	// assume the maximum cores are 8
-	Core_x = 8;
-	Core_y = 8;
+	Core_x = core_limit;
+	Core_y = core_limit;
 	int num_cores=0;
-	for(int i=0;i<Core_x;i++){
+	// first need to fix the number of partitions
+	// based on number of boundary nets
+	//for(int i=0;i<Core_x;i++){
+		int i=1;{
 		for(int j=0;j<Core_y;j++){
 			num_cores = i*j;
 			// generate the combination
-			if(num_cores == 1 || num_cores > Core_x)
+			if(num_cores <=1 || num_cores > core_limit)
 				continue;
 			// for each of the partition, statistically calc the bd nets and so on	
+			// x_list_bd_map, x_list_nd_map
+			// explore_one_partition(i, j);	
+			explore_one_partition_balance(i, j);	
+		}
+	}
+}
+
+// explore one partition: X x Y
+// try to balance the number of nodes: +(-)10% of nodes of each block
+void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
+	cout<<endl<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
+	double len_per_x, len_per_y;
+	size_t num_nodes = 0;
+	size_t num_nodes_x = 0;
+	size_t num_nodes_y = 0;
+	for(int i=0;i<(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		num_nodes = ckt->nodelist.size()-1;
+		num_nodes_x = num_nodes / x_blocks;
+		num_nodes_y = num_nodes / y_blocks;
+		vector<long> x_coord_vec;
+		vector<long> x_bd_vec;
+		vector<long> y_coord_vec;
+		vector<long> y_bd_vec;
+		cout<<"ckt, num_nodes_x, num_nodes_y: "<<ckt->get_name()<<" "<<num_nodes_x<<" "<<num_nodes_y<<endl;
+		size_t sum_nodes_x = 0;
+		size_t sum_nodes_y = 0;
+		if(x_blocks >1){
+			double thresh_l = num_nodes_x * 0.5;
+			double thresh_u = num_nodes_x * 1.5;
+			cout<<"thresh_x l / u: "<<thresh_l<<" "<<thresh_u<<endl;
+			long min_bd = 0;
+			long min_coord = 0;
+			size_t min_sum_nodes_x = 0;
+			size_t min_j = 0;
+			int count = 0;
+			for(size_t j=0;j<ckt->x_list.size();j++){
+				long coord = ckt->x_list[j];
+				sum_nodes_x += ckt->x_list_nd_map[coord];
+				// cout<<"coord, num_nodes_x: "<<coord<<" "<<num_nodes_x<<endl;
+				// start to sample the bd nodes
+				if(sum_nodes_x >= thresh_l && sum_nodes_x <= thresh_u){
+					// clog<<"current, min: "<<ckt->x_list_bd_map[coord]<<" "<<min_bd<<endl;
+					if(min_bd == 0 || ckt->x_list_bd_map[coord] < min_bd){
+						min_bd = ckt->x_list_bd_map[coord];
+						min_coord = coord;
+						min_sum_nodes_x = sum_nodes_x;
+						min_j = j;
+						// clog<<"min_bd, coord: "<<min_bd<<" "<<min_coord<<" "<<min_sum_nodes_x<<endl;
+					}
+				}
+				if(sum_nodes_x > thresh_u){// || j == ckt->y_list.size()-1){
+					x_coord_vec.push_back(min_coord);
+					x_bd_vec.push_back(min_bd);
+					cout<<"x / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_x<<" "<<min_bd<<" "<<min_coord<<endl;
+					min_bd = 0;
+					if(j == ckt->x_list.size()-1)
+						break;
+					// start to search next one
+					j = min_j;
+					sum_nodes_x = 0;	
+				}
+			}
+			// cout<<"x min_bd, min_coord: "<<min_bd<<" "<<min_coord<<endl;
+		}
+		if(y_blocks >1){
+			double thresh_l = num_nodes_y * 0.9;
+			double thresh_u = num_nodes_y * 1.1;
+			cout<<"thresh_y l / u: "<<thresh_l<<" "<<thresh_u<<endl;
+			long min_bd = 0;
+			long min_coord = 0;
+			size_t min_sum_nodes_y = 0;
+			size_t min_j=0;
+			int count = 0;
+			cout<<"start to calculate y bd info. "<<y_blocks<<endl;
+			for(size_t j=0;j<ckt->y_list.size();j++){
+				long coord = ckt->y_list[j];
+				sum_nodes_y += ckt->y_list_nd_map[coord];
+				// cout<<"coord, num_nodes_x: "<<coord<<" "<<num_nodes_x<<endl;
+				// start to sample the bd nodes
+				if(sum_nodes_y >= thresh_l && sum_nodes_y <= thresh_u){
+					// clog<<"current, min: "<<ckt->x_list_bd_map[coord]<<" "<<min_bd<<endl;
+					if(min_bd == 0 || ckt->y_list_bd_map[coord] < min_bd){
+						min_bd = ckt->y_list_bd_map[coord];
+						min_coord = coord;
+						min_sum_nodes_y = sum_nodes_y;
+						min_j = j;
+						// clog<<"min_bd, coord: "<<min_bd<<" "<<min_coord<<" "<<min_sum_nodes_x<<endl;
+					}
+				}
+				if(sum_nodes_y > thresh_u){
+					y_coord_vec.push_back(min_coord);
+					y_bd_vec.push_back(min_bd);
+					cout<<"y / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_y<<" "<<min_bd<<" "<<min_coord<<endl;
+					min_bd = 0;
+					if(j == ckt->y_list.size()-1)
+						break;
+					// start to search next one
+					j = min_j;
+					sum_nodes_y = 0;	
+				}
+			}
+			
+			// clog<<"min_bd, min_coord: "<<min_bd<<" "<<min_coord<<endl;
+		}
+	}
+}
+
+// explore one partition: X x Y
+void Parser::explore_one_partition(int x_blocks, int y_blocks){
+	clog<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
+	double len_per_x, len_per_y;
+	for(int i=0;i<1;i++){//(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		// clog<<"ckt->lx, ly, ux, uy: "<<ckt->lx<<" "<<ckt->ly<<" "<<ckt->ux<<" "<<ckt->uy<<endl;
+		len_per_x = (ckt->ux - ckt->lx+0.5)*1.0 / x_blocks;
+		len_per_y = (ckt->uy - ckt->ly+0.5)*1.0 / y_blocks;
+		// clog<<"ckt, len_x / y: "<<ckt->get_name()<<" "<<len_per_x<<" "<<len_per_y<<endl;
+		int sum_bd_nets = 0;
+		
+		// bd nets along x dir
+		for(int j=0;j<x_blocks-1;j++){
+			long bd_x = j*len_per_x + floor(len_per_x);
+			// clog<<"x, bd: "<<bd_x<<endl;
+			double min_dist = -1;
+			int min_id = 0;
+			for(int k=0;k<ckt->x_list.size();k++){
+				double dist = fabs(bd_x - ckt->x_list[k]);
+				if(min_dist == -1){
+					min_dist = dist;
+					min_id = ckt->x_list[k];
+				}
+				else if(dist < min_dist){
+					min_dist = dist;
+					min_id = ckt->x_list[k];
+				}	
+			}
+			clog<<"min_dist, x_list: "<<min_id<<" "<<ckt->x_list_bd_map[min_id]<<endl;
+			sum_bd_nets += ckt->x_list_bd_map[min_id];
+			clog<<"ckt, par, x bd: "<<ckt->get_name()<<" "<<j<<" "<<ckt->x_list_bd_map[min_id]<<endl;
+			clog<<"sum_bd nets: "<<sum_bd_nets<<endl;
+		}
+		// bd nets along y dir
+		for(int j=0;j<y_blocks-1;j++){
+			long bd_y = j*len_per_y + floor(len_per_y);
+			// clog<<"x, bd: "<<bd_x<<endl;
+			double min_dist = -1;
+			int min_id = 0;
+			for(int k=0;k<ckt->y_list.size();k++){
+				double dist = fabs(bd_y - ckt->y_list[k]);
+				if(min_dist == -1){
+					min_dist = dist;
+					min_id = ckt->y_list[k];
+				}
+				else if(dist < min_dist){
+					min_dist = dist;
+					min_id = ckt->y_list[k];
+				}	
+			}
+			clog<<"min_dist, y_list: "<<min_id<<" "<<ckt->y_list_bd_map[min_id]<<endl;
+			sum_bd_nets += ckt->y_list_bd_map[min_id];
+			clog<<"ckt, par, y bd: "<<ckt->get_name()<<" "<<j<<" "<<ckt->y_list_bd_map[min_id]<<endl;
+			// clog<<"sum_bd nets: "<<sum_bd_nets<<endl;
 		}
 	}
 }
