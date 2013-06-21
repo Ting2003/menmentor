@@ -63,6 +63,7 @@ public:
 	~Circuit();
 	
 	void pre_release_circuit();
+	void clean_explore();
 	void check_sys() const;
 	friend class Block;
 	// can be written as inline to speed up

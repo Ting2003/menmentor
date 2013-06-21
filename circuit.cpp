@@ -86,21 +86,22 @@ Circuit::Circuit(string _name):name(_name),
 void Circuit::pre_release_circuit(){
 	// delete node
 	for(size_t i=0;i<nodelist.size();i++){
-		nodelist[i]->nbr_vec.clear();
-		 delete nodelist[i];
+		if(!nodelist[i]->is_ground()){
+			// clog<<"node: "<<*nodelist[i]<<endl;
+		 	free(nodelist[i]);
+		// clog<<"finish deleting i: "<<i<<" th node. "<<endl;
+		}
 	}
-
-	// delete node
-	for(size_t i=0;i<replist.size();i++) delete replist[i];
-	nodelist.clear();
-	replist.clear();
+	// clog<<"after release nodelist. "<<endl;
+	// nodelist.clear();
 	// delete nets
 	for(int type=0;type<NUM_NET_TYPE;type++){
 		NetList & ns = net_set[type];
 		NetList::iterator it;
 		for(it=ns.begin();it!=ns.end();++it)
-			delete *it;
+			free(*it);
 	}
+	// clog<<"after release netlist. "<<endl;
 }
 
 // Trick: do not release memory to increase runtime
@@ -3342,4 +3343,22 @@ double Circuit::find_diff(int my_id){
 	}
 	// return the max vol diff of 2 iters
 	return diff;
+}
+
+// clean the variables for exploring
+void Circuit::clean_explore(){
+	x_list.clear();
+	y_list.clear();
+	x_list_bd_map.clear();
+	y_list_bd_map.clear();
+	x_list_nd_map.clear();
+	y_list_nd_map.clear();
+	lx = -1;
+	ly = -1;
+	ux = -1;
+	uy = -1;
+	// clog<<"before pre release circuit. "<<endl;
+	// clean nodelist and netlist
+	pre_release_circuit();	
+	// clog<<"after pre release circuit. "<<endl;
 }

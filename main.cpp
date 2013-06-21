@@ -16,7 +16,7 @@ const char * usage="Usage: %s [-eorbILifl] benchmark\n\
     -l log file (default to screen)\n"
 ;
 
-const char * usage2="Usage: %s -i input -f output\n";
+const char * usage2="Usage: %s -i input -a partition_flag -f output\n";
 
 int main(int argc, char * argv[]){
 	int my_id;
@@ -32,11 +32,12 @@ int main(int argc, char * argv[]){
 	//char * logfile="/dev/null";
 	char * logfile=NULL;
 	char * input=NULL, * output=NULL;
+	bool partition_flag;
 	bool input_flag = false, output_flag = false;
 	Circuit::get_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
 
-	while( ( c = getopt(argc, argv, "i:f:e:o:r:b:l:LI")) != -1 ){
+	while( ( c = getopt(argc, argv, "i:a:f:e:o:r:b:l:LI")) != -1 ){
 		switch(c){
 		case 'e':
 			epsilon = atof(optarg);
@@ -55,6 +56,9 @@ int main(int argc, char * argv[]){
 			break;
 		case 'I':
 			mode = 0;
+			break;
+		case 'a':
+			partition_flag = atoi(optarg);
 			break;
 		case 'l':
 			logfile = optarg;
@@ -117,14 +121,18 @@ int main(int argc, char * argv[]){
 	Parser parser(&cktlist);
 	clock_t t1,t2;
 	t1=clock();
-	parser.parse(my_id, input, mpi_class, tran, num_procs);
+	if(my_id ==0)
+		clog<<"readed par flag is: "<<partition_flag<<endl;
+	// bool partition_flag = false;
+	parser.parse(my_id, input, mpi_class, tran, num_procs, partition_flag);
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// after parsing, this mem can be released
 	t2=clock();
 	if(my_id==0) clog<<"Parse time="<<1.0*(t2-t1)/CLOCKS_PER_SEC<<endl;
 
-	return 0;	
+	if(partition_flag == true)
+		return 0;	
 	double mpi_t11, mpi_t12;
 	mpi_t11 = MPI_Wtime();
 //#if 0	

@@ -34,7 +34,7 @@ public:
 	~Parser();
 
 	// parser a input file and construct the circuit
-	void parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs);
+	void parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs, bool partition_flag);
 
 	//int get_num_layers() const;
 
@@ -81,9 +81,9 @@ public:
 	void InitialIF(vector<FILE *> & ifs, int &my_id, int &block_size, int &color);
 	void pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs);
 	void build_x_y_list_map();
-	void explore_partition(int num_procs);
+	void explore_partition(int num_procs, MPI_CLASS &mpi_class);
 	void explore_one_partition(int x_blocks, int y_blocks);
-	
+	void clean_explore_partition(int num_procs, MPI_CLASS &mpi_class);
 	void explore_one_partition_balance(int x_blocks, int y_blocks);
 	bool map_res_net(Net*net);
 	bool map_net_x(Net *net);

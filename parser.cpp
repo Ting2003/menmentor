@@ -311,7 +311,7 @@ int Parser::create_circuits(vector<CKT_NAME> &ckt_name_vec){
 // Note: the file will be parsed twice
 // the first time is to find the network information
 // and the second time is to create nodes
-void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs){	
+void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran, int num_procs, bool partition_flag){	
 	MPI_Datatype MPI_Vector;
 	int count =1;
 	int lengths = 10;
@@ -352,10 +352,14 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	create_circuits(ckt_name_vec);
 	if(my_id ==0){
 		clog<<"before pre partitioning. "<<endl;
-		pre_partition(my_id, mpi_class, tran, num_procs);	
+		if(partition_flag == true){
+			pre_partition(my_id, mpi_class, tran, num_procs);
+		}
 	}
-	return;	
-	// if(my_id==0) clog<<"after create circuits"<<endl;
+	
+	if(partition_flag)
+		return;	
+	if(my_id==0) clog<<"after pre partitioning."<<endl;
 
 	build_block_geo(my_id, mpi_class, tran, num_procs);
 
@@ -1182,12 +1186,14 @@ void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 		Circuit * ckt = (*p_ckts)[i];
 		if(ckt->map_node.size()>0)
 			ckt->map_node.clear();	
-		// ckt->pre_release_circuit();
-		// ckt->~Circuit();
 	}
 	build_x_y_list_map();	
 	// then explore the partition with no overlap
-	explore_partition(num_procs); 	
+	explore_partition(num_procs, mpi_class);
+	if(my_id==0) clog<<"after explore_partition. "<<endl; 
+	// now clean all the resources for exploring partitioning
+	//clean_explore_partition(num_procs, mpi_class);
+	// if(my_id==0) clog<<"after clean explore partition. "<<endl;
 	// clog<<"after release ckt: "<<(*p_ckts).size()<<endl;	
 }// end of parse
 
@@ -1300,60 +1306,12 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		report_exit("Invalid net type!\n");
 		break;
 	}
-
 	
-		// create a Net
+	// create a Net
 	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
-
-#if 0
-	if(net_type == CURRENT){
-		cout<<"to current net. "<<endl;
-		net->tr = new double [7];
-		// assign pulse paramter for pulse input
-		chs = strtok_r(line, sep, &saveptr);
-		for(int i=0;i<3;i++)
-			chs = strtok_r(NULL, sep, &saveptr);
-		if(chs != NULL){
-			clog<<"chs: "<<chs<<endl;
-			chs = strtok_r(NULL, sep, &saveptr);
-			}
-		if(chs != NULL){
-			chs = strtok_r(NULL, sep, &saveptr);
-			// V1
-			net->tr[0] = atof(chs);
-			chs = strtok_r(NULL, sep, &saveptr);
-			// V2
-			net->tr[1] = atof(chs);
-			chs = strtok_r(NULL, sep, &saveptr);
-			// TD
-			net->tr[2] = atof(chs);
-			chs = strtok_r(NULL, sep, &saveptr);
-			// Tr
-			net->tr[3] = atof(chs);
-			chs = strtok_r(NULL, sep, &saveptr);
-			// Tf
-			net->tr[4] = atof(chs);
-			chs = strtok_r(NULL, sep, &saveptr);
-			// PW
-			net->tr[5] = atof(chs);
-			chs = strtok_r(NULL, sep, &saveptr);
-			// Period
-			net->tr[6] = atof(chs);
-		}
-	}
-#endif
-	// trick: when the value of a resistor via is below a threshold,
-	// treat it as a 0-voltage via
-	//if( Circuit::MODE == (int)IT ) {
-		// try_change_via(net);
-	//}
 
 	// insert this net into circuit
 	ckt->add_net(net);
-	// IMPORTANT: set the relationship between node and net
-	// update node voltage if it is an X node
-	// set node to be X node if it connects to a voltage source
-	update_node(net);
 }
 
 // build the statistic info for x and y dir
@@ -1481,7 +1439,7 @@ void Parser::build_x_y_list_map(){
 
 // explore the partitions with x_y_list_map
 // no overlap here
-void Parser::explore_partition(int num_procs){
+void Parser::explore_partition(int num_procs, MPI_CLASS &mpi_class){
 	int core_limit = 8;//num_procs;
 	// assume the maximum cores are 8
 	Core_x = core_limit;
@@ -1522,19 +1480,28 @@ void Parser::explore_partition(int num_procs){
 		if(y_bd_vec[i].size()!=0)
 			avg_y_bd /= y_bd_vec[i].size();
 		cout<<"ckt, avg_x_bd and y_bd: "<<ckt->get_name()<<" "<<avg_x_bd<<" "<<avg_y_bd<<endl;
-		if(avg_x_bd > 3*avg_y_bd)
-			cout<<"only doing y partition. "<<endl;
-		else if(avg_y_bd > 3*avg_x_bd)
-			cout<<"only doing x partition. "<<endl;
-		else
-			cout<<"doing both x and y partition. "<<endl;
+		if(avg_x_bd > 3*avg_y_bd){
+			clog<<"only doing y partition. "<<endl;
+			mpi_class.X_BLOCKS=1;
+			mpi_class.Y_BLOCKS=num_procs;	
+		}
+		else if(avg_y_bd > 3*avg_x_bd){
+			clog<<"only doing x partition. "<<endl;
+			mpi_class.X_BLOCKS=num_procs;
+			mpi_class.Y_BLOCKS=1;
+		}
+		else{
+			clog<<"doing both x and y partition. "<<endl;
+			clog<<"need to manually assign the partition. "<<endl;
+		}
+		// clog<<"mpi_class.X_BLOCKS and Y_BLOCKS: "<<mpi_class.X_BLOCKS<<" "<<mpi_class.Y_BLOCKS<<endl;
 	}
 }
 
 // explore one partition: X x Y
 // try to balance the number of nodes: +(-)10% of nodes of each block
 void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
-	cout<<endl<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
+	// cout<<endl<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
 	double len_per_x, len_per_y;
 	size_t num_nodes = 0;
 	size_t num_nodes_x = 0;
@@ -1547,17 +1514,13 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 		num_nodes = ckt->nodelist.size()-1;
 		num_nodes_x = num_nodes / x_blocks;
 		num_nodes_y = num_nodes / y_blocks;
-		/*vector<long> x_coord_vec;
-		vector<long> x_bd_vec;
-		vector<long> y_coord_vec;
-		vector<long> y_bd_vec;*/
-		cout<<"ckt, num_nodes_x, num_nodes_y: "<<ckt->get_name()<<" "<<num_nodes_x<<" "<<num_nodes_y<<endl;
+		// cout<<"ckt, num_nodes_x, num_nodes_y: "<<ckt->get_name()<<" "<<num_nodes_x<<" "<<num_nodes_y<<endl;
 		size_t sum_nodes_x = 0;
 		size_t sum_nodes_y = 0;
 		if(x_blocks >1){
 			double thresh_l = num_nodes_x * 0.5;
 			double thresh_u = num_nodes_x * 1.5;
-			cout<<"thresh_x l / u: "<<thresh_l<<" "<<thresh_u<<endl;
+			// cout<<"thresh_x l / u: "<<thresh_l<<" "<<thresh_u<<endl;
 			long min_bd = 0;
 			long min_coord = 0;
 			size_t min_sum_nodes_x = 0;
@@ -1581,7 +1544,7 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 				if(sum_nodes_x > thresh_u){
 					x_coord_vec[i].push_back(min_coord);
 					x_bd_vec[i].push_back(min_bd);
-					cout<<"x / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_x<<" "<<min_bd<<" "<<min_coord<<endl;
+					// cout<<"x / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_x<<" "<<min_bd<<" "<<min_coord<<endl;
 					min_bd = 0;
 					if(j == ckt->x_list.size()-1)
 						break;
@@ -1595,13 +1558,13 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 		if(y_blocks >1){
 			double thresh_l = num_nodes_y * 0.9;
 			double thresh_u = num_nodes_y * 1.1;
-			cout<<"thresh_y l / u: "<<thresh_l<<" "<<thresh_u<<endl;
+			// cout<<"thresh_y l / u: "<<thresh_l<<" "<<thresh_u<<endl;
 			long min_bd = 0;
 			long min_coord = 0;
 			size_t min_sum_nodes_y = 0;
 			size_t min_j=0;
 			int count = 0;
-			cout<<"start to calculate y bd info. "<<y_blocks<<endl;
+			// cout<<"start to calculate y bd info. "<<y_blocks<<endl;
 			for(size_t j=0;j<ckt->y_list.size();j++){
 				long coord = ckt->y_list[j];
 				sum_nodes_y += ckt->y_list_nd_map[coord];
@@ -1620,7 +1583,7 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 				if(sum_nodes_y > thresh_u){
 					y_coord_vec[i].push_back(min_coord);
 					y_bd_vec[i].push_back(min_bd);
-					cout<<"y / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_y<<" "<<min_bd<<" "<<min_coord<<endl;
+					// cout<<"y / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_y<<" "<<min_bd<<" "<<min_coord<<endl;
 					min_bd = 0;
 					if(j == ckt->y_list.size()-1)
 						break;
@@ -1637,7 +1600,7 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 
 // explore one partition: X x Y
 void Parser::explore_one_partition(int x_blocks, int y_blocks){
-	clog<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
+	// clog<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
 	double len_per_x, len_per_y;
 	for(int i=0;i<1;i++){//(*p_ckts).size();i++){
 		Circuit *ckt = (*p_ckts)[i];
@@ -1692,4 +1655,17 @@ void Parser::explore_one_partition(int x_blocks, int y_blocks){
 			// clog<<"sum_bd nets: "<<sum_bd_nets<<endl;
 		}
 	}
+}
+
+// clean all the resources for exploring the partitioning
+void Parser::clean_explore_partition(int num_procs, MPI_CLASS &mpi_class){
+	x_coord_vec.clear();
+	y_coord_vec.clear();
+	x_bd_vec.clear();
+	y_bd_vec.clear();
+	for(size_t i=0;i<(*p_ckts).size();i++){
+		Circuit *ckt = (*p_ckts)[i];
+		ckt->clean_explore();	
+	}
+	// clog<<"after release ckt resource"<<endl;
 }
