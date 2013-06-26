@@ -624,11 +624,13 @@ int Parser::extract_ckt_name(int &my_id,
 				// now skip the pulse current if any exists
 				while(chs !=NULL){
 					chs = strtok_r(NULL, sep, &saveptr);
+					if(chs == NULL) break;
 					// clog<<"chs: "<<chs<<endl;
 					strcpy(star_check, chs);
 					// read the coordinate
 					if(chs[0] == '*'){
 						chs = strtok_r(NULL, sep, &saveptr);
+						if(chs == NULL) break;
 						// clog<<"coord: chs: "<<chs<<endl;
 						strcpy(coord1, chs);
 						strcpy(coord2, coord1);
@@ -797,11 +799,13 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 				  // now skip the pulse current if any exists
 				  while(chs !=NULL){
 					chs = strtok_r(NULL, sep, &saveptr);
+					if(chs == NULL) break;
 					// clog<<"chs: "<<chs<<endl;
 					// strcpy(star_check, chs);
 					// read the coordinate
 					if(chs[0] == '*'){
 						chs = strtok_r(NULL, sep, &saveptr);
+						if(chs == NULL) break;
 						// clog<<"coord: chs: "<<chs<<endl;
 						strcpy(coord1, chs);
 						strcpy(coord2, coord1);
