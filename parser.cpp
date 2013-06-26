@@ -90,11 +90,14 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	char *chs_1;
 	char *saveptr_1;
 	const char *sep_1 = "_";
+	bool pulse_flag = false;
 	// find grid boundary x and y
 	sscanf(line, "%s %s %s", sname,sa,sb);
 	// if(my_id==1)
 		// clog<<"block 1 line, sa, sb: "<<line<<" "<<sa<<" "<<sb<<endl;
 	if(sa[0] == '0' || sb[0] == '0'){
+		// clog<<"line: "<<line<<endl;
+// #if 0
 	  if(sname[0] == 'I' || sname[0] == 'i'){
 		strcpy(line_s, line);
 		// clog<<"current line: "<<line<<endl;
@@ -111,17 +114,22 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		// now skip the pulse current if any exists
 		while(chs !=NULL){
 			chs = strtok_r(NULL, sep, &saveptr);
+			if(chs == NULL) break;
 			// clog<<"chs: "<<chs<<endl;
 			strcpy(star_check, chs);
+			if(chs[0] == 'P' || chs[0] == 'p')
+				pulse_flag = true;
 			// read the coordinate
 			if(chs[0] == '*'){
 				chs = strtok_r(NULL, sep, &saveptr);
+				if(chs == NULL) break;
 				// clog<<"coord: chs: "<<chs<<endl;
 				strcpy(coord1, chs);
 				strcpy(coord2, coord1);
 				break;
 			}
 		}
+		// clog<<"finish one line. "<<endl;
 	   }else{
 		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
 		// copy string
@@ -129,10 +137,13 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		// clog<<"coord1, coord2: "<<coord1<<" "<<coord2<<endl;
 		// coord2 = coord1;
 	  }
+// #endif
 	}
-	else 
+	else{
+		// clog<<"regular line: "<<line<<endl; 
 		sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, star, coord1, coord2);
-
+	}
+// #if 0
 	// net type
 	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
 	// ckt name
@@ -142,7 +153,6 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	
 	extract_node(sa, nd[0], coord1);
 	extract_node(sb, nd[1], coord2);
-	//clog<<"after extract nodes. "<<endl;
 
 	int ckt_id = 0;
  	for(size_t i=0;i<(*p_ckts).size();i++){
@@ -219,9 +229,9 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	// create a Net
 	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
 
-//#if 0
-	if(net_type == CURRENT){
+	if(net_type == CURRENT && pulse_flag == true){
 		// clog<<"to current net. "<<line<<endl;
+		// clog<<"pulse_flag: "<<pulse_flag<<endl;
 		net->tr = new double [7];
 		// assign pulse paramter for pulse input
 		chs = strtok_r(line, sep, &saveptr);
@@ -256,7 +266,6 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			net->tr[6] = atof(chs);
 		}
 	}
-//#endif
 	// trick: when the value of a resistor via is below a threshold,
 	// treat it as a 0-voltage via
 	//if( Circuit::MODE == (int)IT ) {
@@ -399,10 +408,10 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// temporary comment second parse	
-	// if(my_id==0) clog<<"before second parse. "<<endl;
+	if(my_id==0) clog<<"before second parse. "<<endl;
 	second_parse(my_id, mpi_class, tran, num_procs);
 
-	// if(my_id==0) clog<<"after second parse."<<endl;
+	if(my_id==0) clog<<"after second parse."<<endl;
 }
 
 void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
@@ -459,7 +468,6 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 	tran.nodes.clear();
 	while( fgets(line, MAX_BUF,f)!=NULL){
 		type = line[0];
-		//clog<<line<<endl;
 		switch(type){
 			case 'r': // resistor
 			case 'R':
@@ -1057,6 +1065,7 @@ void Parser::block_parse_dots(char *line, Tran &tran, int &my_id){
 			//clog<<"out len: "<<tran.length<<endl;
 			break;
 		case 'p': // print
+			clog<<"line: "<<line<<endl;
 			Node *nd_ptr;	
 			chs = strtok_r(line, sep, &saveptr);
 			chs = strtok_r(NULL, sep, &saveptr);
