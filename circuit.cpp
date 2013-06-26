@@ -702,9 +702,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	print_solution();
  #endif
 	// cout<<nodelist;
-	/*if(my_id==0)
+	if(my_id==0)
 		cout<<nodelist<<endl;
-		for(size_t i=0;i<block_vec.size();i++){
+		/*for(size_t i=0;i<block_vec.size();i++){
 			for(size_t j=0;j<block_vec[i]->count;j++)
 				cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
 		}*/

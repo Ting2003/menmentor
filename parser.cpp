@@ -44,7 +44,7 @@ void Parser::extract_node(char * str, Node & nd, char * coord){
 	char * saveptr;
 	char l[MAX_BUF];
 	strcpy(l, coord);
-	const char * sep = "(,)";
+	const char * sep = "(_ )";
 
 	// node name
 	chs = strtok_r(l, sep, &saveptr);
@@ -80,6 +80,8 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	static char star[MAX_BUF];
 	static char coord1[MAX_BUF];
 	static char coord2[MAX_BUF];
+	static char line_s[MAX_BUF];
+	static char star_check[MAX_BUF];
 	static Node nd[2];
 	Node * nd_ptr[2];	// this will be set to the two nodes found
 	double value;
@@ -93,12 +95,40 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	// if(my_id==1)
 		// clog<<"block 1 line, sa, sb: "<<line<<" "<<sa<<" "<<sb<<endl;
 	if(sa[0] == '0' || sb[0] == '0'){
-	// if(sa == "0" || sb == "0"){
+	  if(sname[0] == 'I' || sname[0] == 'i'){
+		strcpy(line_s, line);
+		// clog<<"current line: "<<line<<endl;
+		chs = strtok_r(line_s, sep, &saveptr);
+		strcpy(sname, chs);
+		// clog<<"chs, sname: "<<chs<<" "<<sname<<endl;
+		chs = strtok_r(NULL, sep, &saveptr);
+		strcpy(sa, chs);
+		chs = strtok_r(NULL, sep, &saveptr);
+		strcpy(sb, chs);
+		chs = strtok_r(NULL, sep, &saveptr);
+		value = atof(chs);	
+		// clog<<"sname, sa, sb, value: "<<sname<<" "<<sa<<" "<<sb<<" "<<value<<endl;
+		// now skip the pulse current if any exists
+		while(chs !=NULL){
+			chs = strtok_r(NULL, sep, &saveptr);
+			// clog<<"chs: "<<chs<<endl;
+			strcpy(star_check, chs);
+			// read the coordinate
+			if(chs[0] == '*'){
+				chs = strtok_r(NULL, sep, &saveptr);
+				// clog<<"coord: chs: "<<chs<<endl;
+				strcpy(coord1, chs);
+				strcpy(coord2, coord1);
+				break;
+			}
+		}
+	   }else{
 		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
 		// copy string
 		strcpy(coord2, coord1);
 		// clog<<"coord1, coord2: "<<coord1<<" "<<coord2<<endl;
 		// coord2 = coord1;
+	  }
 	}
 	else 
 		sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, star, coord1, coord2);
@@ -186,22 +216,23 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	}
 
 	
-		// create a Net
+	// create a Net
 	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
 
-#if 0
+//#if 0
 	if(net_type == CURRENT){
-		cout<<"to current net. "<<endl;
+		// clog<<"to current net. "<<line<<endl;
 		net->tr = new double [7];
 		// assign pulse paramter for pulse input
 		chs = strtok_r(line, sep, &saveptr);
 		for(int i=0;i<3;i++)
 			chs = strtok_r(NULL, sep, &saveptr);
 		if(chs != NULL){
-			clog<<"chs: "<<chs<<endl;
+			// clog<<"chs: "<<chs<<endl;
 			chs = strtok_r(NULL, sep, &saveptr);
 			}
 		if(chs != NULL){
+			// clog<<"chs again: "<<chs<<endl;
 			chs = strtok_r(NULL, sep, &saveptr);
 			// V1
 			net->tr[0] = atof(chs);
@@ -225,7 +256,7 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			net->tr[6] = atof(chs);
 		}
 	}
-#endif
+//#endif
 	// trick: when the value of a resistor via is below a threshold,
 	// treat it as a 0-voltage via
 	//if( Circuit::MODE == (int)IT ) {
@@ -321,13 +352,15 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 			&MPI_Vector);
 	int error = MPI_Type_commit(&MPI_Vector);
 
-	if(my_id==0) clog<<"create new type: "<<error<<endl;
+	// if(my_id==0) clog<<"create new type: "<<error<<endl;
 
 	this->filename = filename;
 
 	// processor 0 will extract layer info
 	// and bcast it into other processor
 	vector<CKT_NAME >ckt_name_vec;
+	
+	// clog<<"before extract ckt name: "<<endl;
 	if(my_id==0){
 		extract_ckt_name(my_id, ckt_name_vec, mpi_class, tran);
 	}
@@ -351,7 +384,7 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	// first time parse:
 	create_circuits(ckt_name_vec);
 	if(my_id ==0){
-		clog<<"before pre partitioning. "<<endl;
+		// clog<<"before pre partitioning. "<<endl;
 		if(partition_flag == true){
 			pre_partition(my_id, mpi_class, tran, num_procs);
 		}
@@ -512,10 +545,12 @@ int Parser::extract_ckt_name(int &my_id,
 	static char sname[MAX_BUF];
 	static char sa[MAX_BUF];
 	static char sb[MAX_BUF];
+	static char line_s[MAX_BUF];
 	
 	static char star[MAX_BUF];
 	static char coord1[MAX_BUF];
 	static char coord2[MAX_BUF];
+	static char star_check[MAX_BUF];
 	static Node nd[2];
 	double value;
 	int i=0;
@@ -524,7 +559,9 @@ int Parser::extract_ckt_name(int &my_id,
 	long y_max=-1;
 	long y_min=-1;
 
-
+	char *chs;
+	char *saveptr;
+	const char *sep = " (,)";
 	// only processor 0 will extract layer info
 	if(my_id!=0) return 0;
 
@@ -538,6 +575,7 @@ int Parser::extract_ckt_name(int &my_id,
 	fgets(line, MAX_BUF, f);
 
 	while(fgets(line, MAX_BUF, f)!=NULL){
+		//clog<<"line: "<<line<<endl;
 		if(line[0]=='*'){
 			// copy the entire line into stringstream
 			stringstream ss;
@@ -560,11 +598,41 @@ int Parser::extract_ckt_name(int &my_id,
 			// find grid boundary x and y
 			sscanf(line, "%s %s %s", sname,sa,sb);
 			if(sa[0] == '0' || sb[0] == '0'){
-			// if(sa == "0" || sb == "0"){
+				// clog<<"line: "<<line<<endl;
+				// current nets
+			  if(sname[0] == 'I' || sname[0] == 'i'){
+				strcpy(line_s, line);
+				// clog<<"current line: "<<line<<endl;
+				chs = strtok_r(line_s, sep, &saveptr);
+				strcpy(sname, chs);
+				// clog<<"chs, sname: "<<chs<<" "<<sname<<endl;
+				chs = strtok_r(NULL, sep, &saveptr);
+				strcpy(sa, chs);
+				chs = strtok_r(NULL, sep, &saveptr);
+				strcpy(sb, chs);
+				chs = strtok_r(NULL, sep, &saveptr);
+				value = atof(chs);	
+				// clog<<"sname, sa, sb, value: "<<sname<<" "<<sa<<" "<<sb<<" "<<value<<endl;
+				// now skip the pulse current if any exists
+				while(chs !=NULL){
+					chs = strtok_r(NULL, sep, &saveptr);
+					// clog<<"chs: "<<chs<<endl;
+					strcpy(star_check, chs);
+					// read the coordinate
+					if(chs[0] == '*'){
+						chs = strtok_r(NULL, sep, &saveptr);
+						// clog<<"coord: chs: "<<chs<<endl;
+						strcpy(coord1, chs);
+						strcpy(coord2, coord1);
+						break;
+					}
+				}
+			  }else{
 				sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
 					star, coord1);
 				// copy string
 				strcpy(coord2, coord1);
+			  }
 			}
 			else 
 				sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, 
@@ -592,6 +660,7 @@ int Parser::extract_ckt_name(int &my_id,
 			parse_dot(line, tran);
 		}
 	}
+	clog<<"finish extract coords from lines. "<<endl;
 	mpi_class.x_max = x_max;
 	mpi_class.x_min = x_min;
 	mpi_class.y_max = y_max;
@@ -673,13 +742,18 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 	if(f==NULL) report_exit("Input file not exist!\n");
 
 	// handles the long print sentence
-	int temp_buf = 10000000;
-	char line[temp_buf];
+	// int temp_buf = 10000000;
+	char line[MAX_BUF];
 	
 	static char star[MAX_BUF];
 	static char coord1[MAX_BUF];
 	static char coord2[MAX_BUF];
-	string line_s;
+	static char star_check[MAX_BUF];
+	static char line_s[MAX_BUF];
+	
+	char *chs;
+	char *saveptr;
+	const char *sep = " (,)";
 
 	int color = 0;
 	vector<FILE *> of;
@@ -689,19 +763,49 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 	// clog<<"after initial ofs. "<<endl;
 
 	int count_1 = 0, count_2 = 0;
-	while( fgets(line, temp_buf, f)!=NULL){
+	while( fgets(line, MAX_BUF, f)!=NULL){
 		if(line[0]=='r' || line[0] =='R' ||
 		   line[0]=='v' || line[0] =='V' ||
 		   line[0]=='i' || line[0]=='I' ||
 		   line[0]=='c' || line[0] == 'C' ||
 		   line[0]=='l' || line[0] == 'L'){
 			sscanf(line, "%s %s %s", sname,sa,sb);
-			if(sa[0] == '0' || sb[0] == '0'){	
-			// if(sa == "0" || sb == "0"){
-				sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
+			if(sa[0] == '0' || sb[0] == '0'){
+				if(sname[0] == 'I' || sname[0] == 'i'){
+				  // clog<<endl<<"current line: "<<line;
+				  strcpy(line_s, line);
+				  chs = strtok_r(line_s, sep, &saveptr); 
+				  // clog<<"line again: "<<line<<endl;	
+				  strcpy(sname, chs);
+				  // clog<<"chs, sname: "<<chs<<" "<<sname<<endl;
+				  chs = strtok_r(NULL, sep, &saveptr);
+				  strcpy(sa, chs);
+				  chs = strtok_r(NULL, sep, &saveptr);
+				  strcpy(sb, chs);
+				  chs = strtok_r(NULL, sep, &saveptr);
+				  value = atof(chs);	
+				  // clog<<"sname, sa, sb, value: "<<sname<<" "<<sa<<" "<<sb<<" "<<value<<endl;
+				
+				  // now skip the pulse current if any exists
+				  while(chs !=NULL){
+					chs = strtok_r(NULL, sep, &saveptr);
+					// clog<<"chs: "<<chs<<endl;
+					// strcpy(star_check, chs);
+					// read the coordinate
+					if(chs[0] == '*'){
+						chs = strtok_r(NULL, sep, &saveptr);
+						// clog<<"coord: chs: "<<chs<<endl;
+						strcpy(coord1, chs);
+						strcpy(coord2, coord1);
+						break;
+					}
+				  }
+				}else{	  
+				  sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, 
 					star, coord1);
-				// copy string
-				strcpy(coord2, coord1);
+				  // copy string
+				  strcpy(coord2, coord1);
+				}
 			}
 			else 
 				sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, 
@@ -709,7 +813,6 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 
 			extract_node(sa, nd[0], coord1);
 			extract_node(sb, nd[1], coord2);
-		
 			for(int i=0;i<num_blocks;i++){
 				// at least one node is inside block
 				count_1 = cpr_nd_block(nd[0], geo, i);
@@ -719,43 +822,34 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 					clog<<"line: "<<line<<endl;
 					clog<<count_1<<" "<<count_2<<endl;
 				}*/
-				if(nd[0].is_ground() && count_2 ==1)
+				if(nd[0].is_ground() && count_2 ==1){
 					temp = fprintf(of[i], "%s", line);
-				else if(nd[1].is_ground() && count_1 ==1)
+					// clog<<"print line: "<<line<<endl;
+				}
+				else if(nd[1].is_ground() && count_1 ==1){
 					temp = fprintf(of[i], "%s", line);
+					// clog<<"print line: "<<line<<endl;
+				}
 				// write all voltage sources
 				//else if(count_1 + count_2 ==2){
 				else if(!nd[0].is_ground() && !nd[1].is_ground() 
 						&& (count_1 + count_2 >=1)){
 					temp = fprintf(of[i], "%s", line);
 					//if(my_id==0)
-					//clog<<"write: "<<temp<<" "<<i<<" "<<line<<endl;
+					// clog<<"write: "<<temp<<" "<<i<<" "<<line<<endl;
 				}
 			}
 		}
 		else{
 			// clog<<"special lines. "<<line<<endl;
-			switch(line[1]){
-				case 't':
-				case 'w':
-				case 'e':// for all procs
-					for(int i=0;i<num_procs;i++){
-						fprintf(of[i], "%s", line);
-					}
-					break;
-				case 'p': // print
-					write_print(tran, of, mpi_class, line);
-					break;
-				default:
-					break;
-
+			for(int i=0;i<num_procs;i++){
+				fprintf(of[i], "%s", line);
 			}
 		}
 	}
 	// free(line);
 	// finally print end file symbol (not need to)
 	fclose(f);
-	//clog<<"close original file. "<<endl;
 	for(int i=0;i<num_procs;i++){
 		fclose(of[i]);
 	}
@@ -938,11 +1032,14 @@ void Parser::insert_node_dir(int &bid_nbr, MPI_CLASS &mpi_class, NodePtrVector &
 }
 
 //every core parses in data simultaneously
+// need to extract its corresponding transient nodes
+// use the find 
 void Parser::block_parse_dots(char *line, Tran &tran, int &my_id){
 	char *chs;
 	char *saveptr;
 	char sname[MAX_BUF];
 	Node_TR_PRINT item;
+	map<string, Node*>::iterator it;
 	// clear tran.nodes, especially for core 0
 	const char *sep = "= v() \n";
 	switch(line[1]){
@@ -960,13 +1057,25 @@ void Parser::block_parse_dots(char *line, Tran &tran, int &my_id){
 			//clog<<"out len: "<<tran.length<<endl;
 			break;
 		case 'p': // print
+			Node *nd_ptr;	
 			chs = strtok_r(line, sep, &saveptr);
 			chs = strtok_r(NULL, sep, &saveptr);
 			while(chs != NULL){
 				chs = strtok_r(NULL, sep, &saveptr);
 				if(chs == NULL) break;
 				item.name = chs;
-				tran.nodes.push_back(item);
+				// clog<<"name: "<<item.name<<endl;
+				for(size_t i=0;i<(*p_ckts).size();i++){
+					Circuit *ckt = (*p_ckts)[i];
+					it = ckt->map_node.find(item.name);
+					if(it!=ckt->map_node.end()){
+						// nd_ptr = it->second;
+						tran.nodes.push_back(item);
+						// if(my_id==0)
+						//clog<<"node: "<<*nd_ptr<<" "<<nd_ptr->pt<<endl;
+						break;
+					}
+				}
 				// disribute nodes into cores
 			};
 			break;
