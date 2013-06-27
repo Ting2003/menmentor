@@ -581,18 +581,19 @@ void Block::build_nd_IdMap(){
 	}
 }
 
-void Block::stamp_matrix_tr(int &my_id, MPI_CLASS &mpi_class, Tran &tran){	
+void Block::stamp_matrix_tr(int &my_id, MPI_CLASS &mpi_class, Tran &tran){
+	// cout<<A<<endl;	
 	for(int type=0;type<NUM_NET_TYPE;type++){
 		NetList & ns = net_set[type];
 		NetList::iterator it;
 		switch(type){
 		case RESISTOR:
-			for(it=ns.begin();it!=ns.end();++it){
+			/*for(it=ns.begin();it!=ns.end();++it){
 				Net * net = *it;
 				if( net == NULL ) continue;
 				assert( fzero(net->value) == false );
 				stamp_resistor_tr(my_id, *it);
-			}
+			}*/
 			break;
 		case CURRENT:
 			break;
@@ -610,8 +611,8 @@ void Block::stamp_matrix_tr(int &my_id, MPI_CLASS &mpi_class, Tran &tran){
 				stamp_capacitance_tr(ns[i], tran, my_id);
 			break;
 		case INDUCTANCE:
-			for(size_t i=0;i<ns.size();i++)
-				stamp_inductance_tr(ns[i], tran, my_id);
+			// for(size_t i=0;i<ns.size();i++)
+				// stamp_inductance_tr(ns[i], tran, my_id);
 			break;
 		default:
 			report_exit("Unknwon net type\n");
@@ -806,37 +807,39 @@ void Block::reset_array(double *bp){
 	}
 }
 
-// make A symmetric for tran
+// make A symmetric for tran: resis around voltage sources
 void Block::make_A_symmetric_tr(int &my_id, Tran &tran){
-	int type = INDUCTANCE;
+	int type = VOLTAGE;
 	NetList & ns = net_set[type];
 	NetList::iterator it;
-	Node *p=NULL, *q=NULL, *r =NULL;
+	// Node *p=NULL, *q=NULL, *r =NULL;
+	Net *net = NULL;
+	Node *nb = NULL;
 
 	for(it=ns.begin();it!=ns.end();it++){
            if( (*it) == NULL ) continue;
+	   // clog<<"modify net: "<<*(*it)<<endl;
 	   Node *na = (*it)->ab[0]->rep;
-	   Node *nb = (*it)->ab[1]->rep;
-
-           assert( fzero((*it)->value) == false );
-           if(!(na->isS()==Y || nb->isS()==Y)) continue;
-	   /*if(my_id==0)
-		   clog<<"bd net: "<<*(*it)<<endl;*/
-           // node p points to X node
-           if(na->isS()==Y){
-              p = na; q = nb;
-           } 
-           else if(nb->isS()==Y){
-              p = nb; q = na;
-           }           
-
-           size_t id = nd_IdMap[q];//q->rid;
-	   double G = tran.step_t / ((*it)->value*2);
+	   if(na->isS()!=Y){
+		na= (*it)->ab[1]->rep;
+	   }
+	   for(size_t i=0;i<na->nbr_vec.size();i++){
+		net = na->nbr_vec[i];
+		if(net->type != RESISTOR)
+			continue;
+		nb = net->ab[0]->rep;
+		if(nb->name == na->name)
+			nb = net->ab[1]->rep;
+	   	// na to Y, nb to resistor node
+	   	// clog<<"na, nb: "<<*na<<" "<<*nb<<endl;
+           	size_t id = nd_IdMap[nb];
+	   	double G = 1.0/net->value;
            
-           //b[id] += p->value * G;
-           bp[id] += xp[nd_IdMap[p]]*G;//p->rid] *G;
-	   /*if(my_id==0)
-		   clog<<"id, bp: "<<id<<" "<<bp[id]<<endl;*/
+           	bp[id] += xp[nd_IdMap[na]]*G;
+
+	   	// if(my_id==0)
+		   // clog<<"id, bp: "<<id<<" "<<bp[id]<<endl;
+	   }
 	}
 }
 

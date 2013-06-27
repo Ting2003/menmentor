@@ -702,8 +702,8 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	print_solution();
  #endif
 	// cout<<nodelist;
-	if(my_id==0)
-		cout<<nodelist<<endl;
+	// if(my_id==0)
+		// cout<<nodelist<<endl;
 		/*for(size_t i=0;i<block_vec.size();i++){
 			for(size_t j=0;j<block_vec[i]->count;j++)
 				cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
@@ -711,8 +711,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	// return true;
 	// then sync
 	MPI_Barrier(MPI_COMM_WORLD);
-
-	return 0;
+	// return 0;
 //#if 0
 	for(size_t i=0;i<block_vec.size();i++){
 		block_vec[i]->reset_array(block_vec[i]->bp);
@@ -730,7 +729,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
 		block_vec[i]->stamp_current_tr(my_id, time);
 		
-
 		// if(my_id==0)
 			// clog<<block_vec[i]->A<<endl;
 
@@ -834,8 +832,10 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    }*/
    
    solve_tr_step(num_procs, my_id, mpi_class);
-   if(my_id==0)
-	cout<<endl<<" "<<nodelist<<endl;
+   /*if(my_id==0){
+	cout<<endl<<" first time step sol: "<<endl;
+	cout<<nodelist<<endl;
+   }*/
 
    //save_tr_nodes(tran, xp);
    // for(size_t i=0;i<block_vec.size();i++)
@@ -2232,9 +2232,9 @@ void Circuit:: link_ckt_nodes(Tran &tran, int &my_id){
          if(nodelist[i]->name == tran.nodes[j].name){
 	    // record the index in tran.nodes
 	    nodes_temp.flag = j;
-	    //if(my_id==3)
-	    	//clog<<"tran.nodes, index: "<<
-		//nodelist[i]->name<<" "<<nodes_temp.flag<<endl;
+	    /* if(my_id==0)
+	    	clog<<"tran.nodes, index: "<<
+		nodelist[i]->name<<" "<<nodes_temp.flag<<endl; */
 	    nodes_temp.node = nodelist[i];
 	    ckt_nodes.push_back(nodes_temp);
             // record the id for ckt_nodes
