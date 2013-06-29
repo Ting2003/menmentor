@@ -969,7 +969,10 @@ void Block::modify_rhs_c_tr(Net *net, double * rhs, double *x){
 	//clog<<"c net: "<<*net<<endl;
 	Node *nk = net->ab[0]->rep;
 	Node *nl = net->ab[1]->rep;
-        
+        if(nk->is_ground()){
+		nk = net->ab[1]->rep;
+		nl = net->ab[0]->rep;
+	} 
 	// nk point to Z node
 	size_t k = nd_IdMap[nk];//nk->rid;
 	size_t l = nd_IdMap[nl];//nl->rid;
@@ -1107,38 +1110,47 @@ void Block::current_tr(Net *net, double &time){
 	//return current;
 }
 
-
 // add Ieq into rhs
 // Ieq = i(t) + 2*C / delta_t *v(t)
 void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 	double i_t = 0;
 	double temp = 0;
 	double Ieq = 0;
-	//if(my_id==0)
+	// if(my_id==0)
 	//clog<<"c net: "<<*net<<" net->flag_bd: "<<net->flag_bd<< endl;
 	Node *nk = net->ab[0]->rep;
 	Node *nl = net->ab[1]->rep;
+	// nk points to non-zero node
+	if(nk->is_ground()){
+		nk = net->ab[1]->rep;
+		nl = net->ab[0]->rep;
+	}
+#if 0
         // nk point to Z node
         if(nk->isS() != Z){
 		swap<Node *>(nk, nl);
 		swap<Node*>(net->ab[0], net->ab[1]);
 	}
-	//if(my_id==0)
+#endif
+	// if(my_id==0)
 	//clog<<"nk, nl: "<<*nk<<" "<<*nl<<endl;
 	size_t k = nd_IdMap[nk];//nk->rid;
 	size_t l = nd_IdMap[nl];//nl->rid;
 	//if(my_id==0)
 	//clog<<"k, l: "<<k<<" "<<l<<" "<<nk->flag_bd<<" "<<nl->flag_bd<<endl;
-	Net *nbr_resis;
+	Net *nbr_resis = NULL;
 	for(size_t i=0;i<nk->nbr_vec.size();i++){
 		Net *nbr_net = nk->nbr_vec[i];
 		if(nbr_net->type == RESISTOR){
 			nbr_resis = nbr_net;
+			// clog<<"nbr_resis: "<<*nbr_resis<<endl;
 			break;
 		}
 	}
 
 	Net *r = nbr_resis; //nk->nbr[TOP];
+	// if(r!=NULL)
+	//clog<<"net_r: "<<*r<<endl;
 	Node *a = r->ab[0]->rep;
 	Node *b = r->ab[1]->rep;
 	// a point to Z node
@@ -1146,7 +1158,7 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 		swap<Node *>(a, b);
 		swap<Node*>(r->ab[0], r->ab[1]);
 	}
-	//clog<<"a, b: "<<*a<<" "<<*b<<endl;
+	// clog<<"a, b: "<<*a<<endl;//" "<<*b<<endl;
 
 	size_t id_a = nd_IdMap[a];//a->rid;
 	size_t id_b = nd_IdMap[b];//b->rid;
@@ -1203,8 +1215,8 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 		 //if(my_id==1)
 		    // clog<<l<<" "<<*nl<<" rhs +: "<<rhs[l]<<endl;
 	}
-	//if(my_id==0)
-	//	clog<<"finish 1 net. "<<endl;
+	// if(my_id==0)
+		//clog<<"finish 1 net. "<<endl;
 }
 
 // add Ieq into rhs

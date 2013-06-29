@@ -777,17 +777,17 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    // set Geq for induc and capac
    set_eq_induc(tran);
    set_eq_capac(tran);
-
-   //if(my_id==0)
-	   //clog<<"before modify_rhs_tr_0. "<<endl;
+   
+   // if(my_id==0)
+	//   clog<<"before modify_rhs_tr_0. "<<endl;
    // already push back cap and induc into set_x and b
    for(size_t i=0;i<block_vec.size();i++){
    	block_vec[i]->modify_rhs_tr_0(block_vec[i]->bnewp, block_vec[i]->xp, my_id);
   	
    }
    
-   //if(my_id==0)
-	   //clog<<"after modify_rhs_tr_0. "<<endl;
+   // if(my_id==0)
+	//   clog<<"after modify_rhs_tr_0. "<<endl;
 #if 0
    // push rhs node into node_set b
    for(size_t i=0;i<n;i++){
@@ -830,7 +830,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	   for(size_t j=0;j<block_vec[i]->count;j++)
 		   cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
    }*/
-   
+   // clog<<"before solve first step. "<<endl; 
    solve_tr_step(num_procs, my_id, mpi_class);
    /*if(my_id==0){
 	cout<<endl<<" first time step sol: "<<endl;
@@ -2226,15 +2226,16 @@ void Circuit::save_ckt_nodes_to_tr(Tran &tran){
 
 // link transient nodes with nodelist
 void Circuit:: link_ckt_nodes(Tran &tran, int &my_id){ 
+   // clog<<"tran.node size: "<<tran.nodes.size()<<endl;
    Node_TR_PRINT nodes_temp;
    for(size_t i=0;i<nodelist.size();i++){
       for(size_t j=0;j<tran.nodes.size();j++){
          if(nodelist[i]->name == tran.nodes[j].name){
 	    // record the index in tran.nodes
 	    nodes_temp.flag = j;
-	    /* if(my_id==0)
-	    	clog<<"tran.nodes, index: "<<
-		nodelist[i]->name<<" "<<nodes_temp.flag<<endl; */
+	    // if(my_id==0)
+	    	// clog<<"tran.nodes, index: "<<
+		//nodelist[i]->name<<" "<<nodes_temp.flag<<endl; 
 	    nodes_temp.node = nodelist[i];
 	    ckt_nodes.push_back(nodes_temp);
             // record the id for ckt_nodes
