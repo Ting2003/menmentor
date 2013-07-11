@@ -1,14 +1,18 @@
 #include "mpi_class.h"
 
+int MPI_CLASS::X_BLOCKS = 1;
+int MPI_CLASS::Y_BLOCKS = 1;
+float MPI_CLASS::overlap_ratio = 0.2;
+
 MPI_CLASS::MPI_CLASS(){
 	NUM_NET_TYPE =3;
-	X_BLOCKS = 1; // # of blocks along x axis2
-	Y_BLOCKS = 1; // # of blocks along y axis
+	// X_BLOCKS = 16; // # of blocks along x axis2
+	// Y_BLOCKS = 20; // # of blocks along y axis
 	x_max = 0;
 	y_max = 0;
 	x_min = 0;
 	y_min = 0;
-	overlap_ratio = 0;//0.2;
+	// overlap_ratio = 0.2;//0.2;
 
 	len_per_block_x = 0;
 	len_per_block_y = 0;
@@ -24,6 +28,18 @@ MPI_CLASS::MPI_CLASS(){
 	block_geo_origin = NULL;
 
 	block_size = 0;
+}
+
+void MPI_CLASS::set_parameters(int x, int y, float over_ratio){
+	X_BLOCKS = x;
+	Y_BLOCKS = y;
+	overlap_ratio = over_ratio;
+}
+
+void MPI_CLASS::get_parameters(int &x, int &y, float &over_ratio){
+	x = X_BLOCKS;
+	y = Y_BLOCKS;
+	over_ratio = overlap_ratio;
 }
 
 MPI_CLASS::~MPI_CLASS(){

@@ -12,13 +12,13 @@ public:
 	~MPI_CLASS();
 	// member
 	int NUM_NET_TYPE;
-	int X_BLOCKS;
-	int Y_BLOCKS;
+	static int X_BLOCKS;
+	static int Y_BLOCKS;
 	long x_max;
 	long y_max;
 	long x_min;
 	long y_min;
-	float overlap_ratio;
+	static float overlap_ratio;
 	double len_per_block_x;
 	double len_per_block_y;
 	double len_ovr_x;
@@ -36,6 +36,9 @@ public:
 
 	int block_size;
 
+	static void set_parameters(int x_blocks, int y_blocks, float over_ratio);
+
+	static void get_parameters(int &x, int &y, float &over_ratio);
 	// function
 	void MPI_Assign_Task(int & num_procs);
 	void set_geo_origin(MPI_CLASS &mpi_class);

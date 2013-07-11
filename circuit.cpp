@@ -659,6 +659,7 @@ void Circuit::solve(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran)
 	solve_IT(my_id, num_procs, mpi_class, tran);
 	//clog<<my_id<<" finish solve: "<<endl;
 }
+
 // solve Circuit
 bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran){
 	double time=0;
@@ -846,10 +847,13 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
    // return 0;
    int iter = 0;
+   clock_t tr_ts, tr_te;
    //if(my_id==0)
 	  // clog<<"after first time step. "<<endl;
    //for(; time <= tran.tot_t; time += tran.step_t){
    while(time <= tran.tot_t){// && iter < 1){
+	if(iter ==0)
+		tr_ts = clock();
 	// bnewp[i] = bp[i];
 	for(size_t i=0;i<block_vec.size();i++){
 		block_vec[i]->copy_vec(block_vec[i]->bnewp, block_vec[i]->bp);
@@ -859,8 +863,8 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
       		block_vec[i]->modify_rhs_tr(block_vec[i]->bnewp, block_vec[i]->xp);
 	}
 
-      //if(my_id==0)
-	      //clog<<" ===== step: ===== "<<my_id<<" "<<time<<endl;
+      // if(my_id==0)
+	  //    clog<<" ===== step: ===== "<<my_id<<" "<<time<<endl;
       // need to add bcast function for processors
       // need to be modified into block version
       //solve_eq_sp(block_info.xp, block_info.bnewp);
@@ -877,6 +881,10 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
       time += tran.step_t;
       // sync in the end of each time step
       MPI_Barrier(MPI_COMM_WORLD);
+      /*if(iter ==0){
+		tr_te = clock();
+		clog<<"time to solve one step is: "<<1.0*(tr_te - tr_ts)/CLOCKS_PER_SEC<<endl;
+	}*/
       //clog<<"after time-t step barrier. "<<my_id<<" "<<time<<endl;
       iter ++;
    }

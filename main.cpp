@@ -7,16 +7,18 @@
 const char * usage="Usage: %s [-eorbILifl] benchmark\n\
     -e EPSILON\n\
     -o OMEGA\n\
-    -r overlap ratio\n\
+    -r mpi overlap ratio\n\
     -b max block nodes\n\
     -I block iterative (default)\n\
     -L direct LU\n\
     -i input file\n\
     -f output file\n\
-    -l log file (default to screen)\n"
+    -l log file (default to screen)\n\
+    -x mpi x block number\n\
+    -y mpi y block number\n"
 ;
 
-const char * usage2="Usage: %s -i input -a partition_flag -f output\n";
+const char * usage2="Usage: %s -i input -a partition_flag -x X_BLOCK -y Y_BLOCK -f output\n";
 
 int main(int argc, char * argv[]){
 	int my_id;
@@ -27,6 +29,9 @@ int main(int argc, char * argv[]){
 	
 	int c;
 	int mode=0;
+	int x_blocks = 0;
+	int y_blocks = 0;
+	float mpi_olap_ratio;
 	double epsilon, omega, overlap_ratio;
 	size_t max_block_nodes;
 	//char * logfile="/dev/null";
@@ -36,8 +41,9 @@ int main(int argc, char * argv[]){
 	bool input_flag = false, output_flag = false;
 	Circuit::get_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
+	MPI_CLASS::get_parameters(x_blocks, y_blocks, mpi_olap_ratio);
 
-	while( ( c = getopt(argc, argv, "i:a:f:e:o:r:b:l:LI")) != -1 ){
+	while( ( c = getopt(argc, argv, "i:a:f:e:o:r:b:l:x:y:LI")) != -1 ){
 		switch(c){
 		case 'e':
 			epsilon = atof(optarg);
@@ -46,7 +52,7 @@ int main(int argc, char * argv[]){
 			omega = atof(optarg);
 			break;
 		case 'r':
-			overlap_ratio = atof(optarg);
+			mpi_olap_ratio = atof(optarg);
 			break;
 		case 'b':
 			max_block_nodes = atof(optarg);
@@ -70,6 +76,12 @@ int main(int argc, char * argv[]){
 		case 'f':
 			output = optarg;
 			output_flag = true;
+			break;
+		case 'x':
+			x_blocks = atoi(optarg);
+			break;
+		case 'y':
+			y_blocks = atoi(optarg);
 			break;
 		case '?':
 		default:
@@ -103,6 +115,9 @@ int main(int argc, char * argv[]){
 
 	Circuit::set_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
+	MPI_CLASS::set_parameters(x_blocks, y_blocks, mpi_olap_ratio);
+	if(my_id==0)
+	clog<<"mpi.x_blocks, y_blocks, overlap_ratio: "<<MPI_CLASS::X_BLOCKS<<" "<<MPI_CLASS::Y_BLOCKS<<" "<<MPI_CLASS::overlap_ratio<<endl;
 	// start to parfile
 	vector<Circuit *> cktlist;
 	MPI_CLASS mpi_class;
@@ -151,8 +166,8 @@ int main(int argc, char * argv[]){
 		MPI_Barrier(MPI_COMM_WORLD);
 		// clog<<"after barrier: "<<my_id<<endl;
 	}
-	if(my_id==0)
-	 	 tran.print_tr_nodes();
+	// if(my_id==0)
+	 	// tran.print_tr_nodes();
 
 	mpi_t12 = MPI_Wtime();
 	
