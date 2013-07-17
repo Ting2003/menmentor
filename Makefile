@@ -38,9 +38,9 @@ CHOLMOD_LIB=$(CHOLMOD_LIB_DIR)/libcholmod.a\
 	    $(PACKAGE)/CCOLAMD/Lib/libccolamd.a\
 	    $(PACKAGE)/CAMD/Lib/libcamd.a \
             ../../package/metis-5.1.0/libmetis/libmetis.a \
-	    ../../package/lapack-3.1.0/lapack_LINUX.a \
-	    ../../package/lapack-3.1.0/blas_LINUX.a\
-	    ../../package/SuiteSparse/SuiteSparse_config/libsuitesparseconfig.a\
+	    ${PACKAGE}/lapack-3.1.0/lapack_LINUX.a \
+	    ${PACKAGE}/lapack-3.1.0/blas_LINUX.a\
+	    ${PACKAGE}/SuiteSparse_config/libsuitesparseconfig.a\
 	    /usr/lib/gcc/x86_64-redhat-linux/3.4.6/libg2c.a \
 	    /usr/lib64/librt.so
 
