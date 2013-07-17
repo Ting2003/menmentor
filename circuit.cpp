@@ -723,9 +723,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	// link transient nodes
 	link_ckt_nodes(tran, my_id);
 	for(size_t i=0;i<block_vec.size();i++){
+		block_vec[i]->flag_ck = 0;
 		block_vec[i]->stamp_matrix_tr(my_id, mpi_class, tran);
 		
-	// stamp_block_matrix_tr(my_id, A, mpi_class, tran);	
 		block_vec[i]->make_A_symmetric_tr(my_id, tran);	   
 
 		block_vec[i]->stamp_current_tr(my_id, time);
@@ -734,13 +734,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 			// clog<<block_vec[i]->A<<endl;
 
    		block_vec[i]->CK_decomp();
-		// Algebra::CK_decomp(A, block_info.L, cm);
-   	/*Lp = static_cast<int *>(block_info.L->p);
-   	Lx = static_cast<double*> (block_info.L->x);
-   	Li = static_cast<int*>(block_info.L->i) ;
-   	Lnz = static_cast<int *>(block_info.L->nz); */
 //#if 0   
 		block_vec[i]->clear_A();
+		block_vec[i]->build_id_map();
 //#endif
 		// bnewp = bp
 		block_vec[i]->copy_vec(block_vec[i]->bnewp,
@@ -749,28 +745,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
    /*********** the following 2 parts can be implemented with pthreads ***/
    // build id_map immediately after transient factorization
-   size_t n = replist.size();
-#if 0
-   id_map = new int [n];
-   cholmod_build_id_map(CHOLMOD_A, block_info.L, cm, id_map);
-
-   temp = new double [n];
-   // then substitute all the nodes rid
-   for(size_t i=0;i<n;i++){
-	int id = id_map[i];
-	replist[id]->rid = i;
-	temp[i] = block_info.bp[i];
-   }
-
-   for(size_t i=0;i<n;i++)
-	block_info.bp[i] = temp[id_map[i]];
-   for(size_t i=0;i<n;i++)
-        temp[i] = block_info.xp[i];
-   for(size_t i=0;i<n;i++)
-        block_info.xp[i] = temp[id_map[i]];
-   delete [] temp;
-   delete [] id_map;
-#endif   
+   size_t n = replist.size();   
    /*for(size_t i=0;i<replist.size();i++){
 	block_info.bnewp[i] = block_info.bp[i];
    }*/
@@ -784,7 +759,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    // already push back cap and induc into set_x and b
    for(size_t i=0;i<block_vec.size();i++){
    	block_vec[i]->modify_rhs_tr_0(block_vec[i]->bnewp, block_vec[i]->xp, my_id);
-  	
+  	block_vec[i]->build_path_graph_top(tran);	
    }
    
    // if(my_id==0)
@@ -2611,12 +2586,14 @@ void Circuit::set_up_path_table(){
    }
 #endif
 }
-
-bool compare_Node_G(const Node_G *nd_1, const Node_G *nd_2){
+#if 0
+bool Circuit::compare_Node_G(const Node_G *nd_1, const Node_G *nd_2){
    return (nd_1->value < nd_2->value);
  }
+#endif
 
 void Circuit::find_path(vector<size_t> &node_set, List_G &path){
+#if 0
    Node_G* ne = pg.nodelist[pg.nodelist.size()-1];
    vector <Node_G *> insert_list;
    sort(node_set.begin(), node_set.end());
@@ -2671,6 +2648,7 @@ void Circuit::find_path(vector<size_t> &node_set, List_G &path){
    //clog<<"path: "<<&path<<endl;
    //clog<<endl;
    insert_list.clear();
+#endif
 }
 
  // find super node columns for path_b and path_x

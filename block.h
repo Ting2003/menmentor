@@ -18,6 +18,8 @@
 //#include "umfpack.h"
 #include "cholmod.h"
 #include "mpi_class.h"
+#include "sp_graph_table.h"
+#include "sp_node.h"
 
 using namespace std;
 
@@ -101,6 +103,25 @@ public:
 
 	double *Lx;
 	int *Li, *Lp, *Lnz;
+	
+	// ****************functions and members for sp_v methods ***
+        Path_Graph pg;
+        int *path_b, *path_x;
+	// double *temp;
+        // int *id_map;
+        int len_path_b, len_path_x;
+        int flag_ck;
+
+	void build_id_map();
+        void update_node_set_bx();
+        void parse_path_table();
+
+	void build_path_graph_top(Tran &tran);
+        void build_path_graph();
+        void build_FFS_path();
+        void build_FBS_path();
+        void set_up_path_table();
+        void find_path(vector<size_t>&node_set, List_G &path);
 
 	// number of *representative* nodes in this block
 	// equal to matrix size and b size

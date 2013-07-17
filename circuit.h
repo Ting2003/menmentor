@@ -263,7 +263,6 @@ private:
 
 	// ****** function for transient *******
 	double *temp;	
-        int *id_map;
         //cholmod_factor *L;
 	/*double *Lx;
 	int *Li, *Lp, *Lnz;*/
@@ -328,6 +327,7 @@ private:
 	// ********* sparse vectors ******
 	Path_Graph pg;
 	int *path_b, *path_x;
+        int *id_map;
 	int len_path_b, len_path_x;
 	int flag_ck;
 	void find_super();

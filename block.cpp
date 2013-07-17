@@ -1173,7 +1173,7 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
        
         // push 2 nodes into node_set_x
         //clog<<*nk<<" "<<k<<endl;
-#if 0
+//#if 0
         pg.node_set_x.push_back(k);
         if(!nl->is_ground()) {
               //clog<<*nl<<" "<<l<<endl;
@@ -1183,7 +1183,7 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
               //clog<<*b<<" "<<id_b<<endl;
            pg.node_set_x.push_back(id_b);
         }
-#endif
+//#endif
 	//if(my_id==0)
 	//	clog<<"before calc temp. "<<endl;
 	if(nk->is_ground())
@@ -1278,10 +1278,10 @@ void Block::modify_rhs_l_tr_0(Net *net, double *rhs, double *x, int &my_id){
         // push inductance nodes into node_set_x
         //clog<<*nk<<" "<<k<<endl;
         //clog<<*b<<" "<<id_b<<endl;
-#if 0
+// #if 0
         pg.node_set_x.push_back(k);
         pg.node_set_x.push_back(id_b);
-#endif
+//#endif
 	Ieq  = i_t + temp;
 	if(nk->isS() !=Y && !nk->is_ground()){
 		 rhs[k] += Ieq; // VDD circuit
@@ -1326,3 +1326,210 @@ void Block::stamp_bd_net(int my_id, Net *net){
 			//clog<<"bd net: "<<id<<" "<<id<<" "<<1.0/net->value<<endl;
 	}
 }
+
+void Block::build_id_map(){
+   double *temp;
+   int *id_map;
+   id_map = new int [count];
+   cholmod_build_id_map(CHOLMOD_A, L, cm, id_map);
+
+   temp = new double [count];
+   // then substitute all the nodes rid
+   for(size_t i=0;i<count;i++){
+	int id = id_map[i];
+	replist[id]->rid = i;
+	temp[i] = bp[i];
+   }
+
+   for(size_t i=0;i<count;i++)
+	bp[i] = temp[id_map[i]];
+   for(size_t i=0;i<count;i++)
+        temp[i] = xp[i];
+   for(size_t i=0;i<count;i++)
+        xp[i] = temp[id_map[i]];
+   delete [] temp;
+   delete [] id_map;
+}
+
+void Block::build_path_graph_top(Tran &tran){
+   if(flag_ck ==1){
+      // push rhs node into node_set b
+      for(size_t i=0;i<count;i++){
+         if(bnewp[i] !=0)
+            pg.node_set_b.push_back(i);
+      } 
+
+      // push back all nodes in output list
+      vector<size_t>::iterator it;
+      size_t id;
+      for(size_t i=0;i<tran.nodes.size();i++){
+         if(tran.nodes[i].node == NULL) continue;
+	 // only handles inside block nd
+	 if(!node_in_block(tran.nodes[i].node->rep))
+		continue;
+         if(!tran.nodes[i].node->rep->is_ground()){
+            id = tran.nodes[i].node->rep->rid;
+            it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
+            if(it == pg.node_set_x.end()){
+               pg.node_set_x.push_back(id);
+            }
+         } 
+      }
+      
+      // get path_b, path_x, len_path_b, len_path_x
+      build_path_graph();
+      clog<<"len_b, x to n: "<<len_path_b<<" "<<
+        len_path_x<<" "<<count<<endl;
+   }
+   // clog<<"build up path time: "<<1.0*(t2-t1)/CLOCKS_PER_SEC<<endl;   
+}
+ 
+void Block::build_path_graph(){
+   build_FFS_path();
+
+   build_FBS_path();
+
+   // only keep the 2 paths, switch from List into array
+   len_path_b = pg.path_FFS.get_size();
+   len_path_x = pg.path_FBS.get_size();
+
+   path_b = new int[len_path_b];
+   path_x = new int [len_path_x];
+   
+   Node_G *nd;
+   nd = pg.path_FFS.first;
+   for(int i=0;i<len_path_b;i++){
+      path_b[i] = nd->value;
+      if(nd->next != NULL)
+         nd = nd->next;
+   }
+   pg.path_FFS.destroy_list();
+
+   nd = pg.path_FBS.first;
+   for(int i=0;i<len_path_x;i++){
+      path_x[i] = nd->value;
+      if(nd->next != NULL)
+         nd = nd->next;
+   }
+   pg.path_FBS.destroy_list();
+
+   pg.nodelist.clear();
+   pg.node_set_b.clear();
+   pg.node_set_x.clear();
+}
+
+void Block::build_FFS_path(){
+   parse_path_table(); 
+
+   set_up_path_table();
+
+   find_path(pg.node_set_b, pg.path_FFS);
+
+   pg.path_FFS.assign_size();
+
+   for(size_t i=0;i<replist.size();i++)
+      pg.nodelist[i]->flag = 0;
+}
+
+void Block::build_FBS_path(){
+  pg.nodelist.clear();
+  parse_path_table();
+  set_up_path_table();
+  find_path(pg.node_set_x, pg.path_FBS);
+   pg.path_FBS.assign_size();
+}
+
+void Block::parse_path_table(){
+   // build up nodelist info
+      Node_G *node;
+      for(size_t i=0;i<replist.size();i++){
+         node = new Node_G();
+         node->value = i;
+         pg.nodelist.push_back(node);
+      }
+}
+
+void Block::set_up_path_table(){
+   size_t n = L->n;
+   //int *Lp, *Li, *Lnz;
+   int p, lnz, s, e;
+   //Lp = static_cast<int *> (L->p);
+   //Lnz = (int *)L->nz;
+   //Li = static_cast<int *> (L->i);
+   for(size_t i=0;i<n;i++){
+      p = Lp[i];
+      lnz = Lnz[i];
+
+      s = Li[p];
+      e = s;
+      if(lnz >1) 
+         e = Li[p+1];
+
+      if(s<e)
+         pg.nodelist[s]->next = pg.nodelist[e];
+   }
+}
+
+bool compare_Node_G(const Node_G *nd_1, const Node_G *nd_2){
+   return (nd_1->value < nd_2->value);
+ }
+
+void Block::find_path(vector<size_t> &node_set, List_G &path){
+   Node_G* ne = pg.nodelist[pg.nodelist.size()-1];
+   vector <Node_G *> insert_list;
+   sort(node_set.begin(), node_set.end());
+   if(node_set.size() == 0) return;
+   
+   // build up the first path start with id = min 
+   int id = node_set[0];
+   do{
+      path.add_node(pg.nodelist[id]);
+      pg.nodelist[id]->flag =1;
+      if(pg.nodelist[id]->next == NULL) break;
+      pg.nodelist[id] = pg.nodelist[id]->next;
+   }while(pg.nodelist[id]->value != ne->value);
+   path.add_node(ne);
+
+   for(size_t i=0; i<node_set.size();i++){
+      int id = node_set[i];
+      if(pg.nodelist[id]->flag == 1) continue;
+      // stops at first place where flag = 0
+      // clog<<"stops at i: "<<i<<endl;
+      do{
+         if(pg.nodelist[id]->flag ==0){
+            insert_list.push_back(pg.nodelist[id]);
+            pg.nodelist[id]->flag =1;
+         }
+         if(pg.nodelist[id]->next == NULL || 
+           pg.nodelist[id]->next->flag ==1)
+            break;
+         // else clog<<"next node: "<<*pg.nodelist[id]->next;
+         pg.nodelist[id] = pg.nodelist[id]->next;
+      }while(pg.nodelist[id]->value != ne->value); 
+   }
+
+   //clog<<"insert_list.size: "<<insert_list.size()<<endl;
+   sort(insert_list.begin(), insert_list.end(), compare_Node_G);
+   //for(int i=0;i<insert_list.size();i++)
+      //clog<<"i, insert: "<<i<<" "<<*insert_list[i]<<endl;
+
+   //clog<<"path: "<<&path<<endl;
+   // p is the old pointer to the list
+   // will be updated into new one
+   Node_G *q=NULL;
+   Node_G *p=NULL;
+//#if 0
+   for(size_t k=0;k<insert_list.size();k++){
+      if(k ==0) p = path.first;
+      else p = q;
+      q = path.insert_node(insert_list[k], p);
+   }
+//#endif
+
+   //clog<<"path: "<<&path<<endl;
+   //clog<<endl;
+   insert_list.clear();
+}
+
+
+

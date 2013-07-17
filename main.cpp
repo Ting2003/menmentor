@@ -101,6 +101,7 @@ int main(int argc, char * argv[]){
 	if(my_id==0) clog<<"num_procs: "<<num_procs<<endl;	
 
 	open_logfile(logfile);
+#if 0
 	// FILE *oof;
 	stringstream ss;
 	ss<<output<<"_"<<my_id;
@@ -112,7 +113,7 @@ int main(int argc, char * argv[]){
 	
 	if( freopen(ss.str().c_str(), "w", stdout) == NULL )
 		report_exit("Ouptut file error\n");
-
+#endif
 	Circuit::set_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
 	MPI_CLASS::set_parameters(x_blocks, y_blocks, mpi_olap_ratio);
