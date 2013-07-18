@@ -67,6 +67,10 @@ void Block::free_block_cholmod(cholmod_common *cm){
 
 void Block::CK_decomp(Matrix & A, cholmod_common *cm){
 	Algebra::CK_decomp(A, L, cm);
+	Lp = static_cast<int *>(L->p);
+   	Lx = static_cast<double*> (L->x);
+   	Li = static_cast<int*>(L->i) ;
+   	Lnz = static_cast<int *>(L->nz);
 }
 
 void Block::solve_CK_tr(){
@@ -1398,8 +1402,9 @@ void Block::push_nd_set_bx(Tran &tran){
  
 void Block::build_path_graph(){
    build_FFS_path();
-
+   clog<<"after build FFS path. "<<endl;
    build_FBS_path();
+   clog<<"after build two paths. "<<endl;
 
    // only keep the 2 paths, switch from List into array
    len_path_b = pg.path_FFS.get_size();
@@ -1431,12 +1436,10 @@ void Block::build_path_graph(){
 }
 
 void Block::build_FFS_path(){
-   parse_path_table(); 
-
+   parse_path_table();
    set_up_path_table();
 
    find_path(pg.node_set_b, pg.path_FFS);
-
    pg.path_FFS.assign_size();
 
    for(size_t i=0;i<replist.size();i++)
@@ -1446,7 +1449,9 @@ void Block::build_FFS_path(){
 void Block::build_FBS_path(){
   pg.nodelist.clear();
   parse_path_table();
+  clog<<"FBS after parse path table. "<<endl;
   set_up_path_table();
+  clog<<"FBS after set up path table. "<<endl;
   find_path(pg.node_set_x, pg.path_FBS);
    pg.path_FBS.assign_size();
 }
@@ -1463,11 +1468,12 @@ void Block::parse_path_table(){
 
 void Block::set_up_path_table(){
    size_t n = L->n;
-   //int *Lp, *Li, *Lnz;
+   // int *Lp, *Li, *Lnz;
    int p, lnz, s, e;
    //Lp = static_cast<int *> (L->p);
    //Lnz = (int *)L->nz;
    //Li = static_cast<int *> (L->i);
+   
    for(size_t i=0;i<n;i++){
       p = Lp[i];
       lnz = Lnz[i];
@@ -1555,8 +1561,15 @@ void Block::push_nd_pg_x(Node *nd){
 
  // find super node columns for path_b and path_x
 void Block::find_super(){
+    clog<<"len_path_b and x: "<<len_path_b<<" "<<len_path_x<<endl;
     s_col_FFS = new int [len_path_b];
     s_col_FBS = new int [len_path_x];
+    
+    // int *Lp, *Li, *Lnz;
+    // Lp = static_cast<int *> (L->p);
+    // Lnz = (int *)L->nz;
+    // Li = static_cast<int *> (L->i);
+
     int p, lnz;
     int j, k;
     // FFS loop
@@ -1579,6 +1592,7 @@ void Block::find_super(){
           k+=3;
        }
     }
+    clog<<"finish ffs loop. "<<endl;
     //FBS loop
     for(k=len_path_x-1;k>=0;){
        j = path_x[k];

@@ -7,6 +7,7 @@ Node_G::Node_G(){
    value = 0;
    next=NULL;
 }
+
 ostream & operator << (ostream & os, const Node_G & node){
       os <<node.value<<" "<<node.flag<<endl;  
       return os;

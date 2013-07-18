@@ -718,7 +718,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 		block_vec[i]->reset_array(block_vec[i]->bp);
 		block_vec[i]->reset_array(block_vec[i]->bnewp);
 	}
-	
+	clog<<"start transient and sparse graph. "<<endl;	
 	/***** solve tran *********/
 	// link transient nodes
 	link_ckt_nodes(tran, my_id);
@@ -736,7 +736,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    		block_vec[i]->CK_decomp();
 //#if 0   
 		block_vec[i]->clear_A();
+		clog<<"block_i, before build id_map: "<<i<<endl;
 		block_vec[i]->build_id_map();
+		clog<<"block_i, after build id_map: "<<i<<endl;
 //#endif
 		// bnewp = bp
 		block_vec[i]->copy_vec(block_vec[i]->bnewp,
@@ -763,14 +765,18 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
   	block_vec[i]->push_nd_set_bx(tran);
    }
    
-   // if(my_id==0)
-	//   clog<<"after modify_rhs_tr_0. "<<endl;
+   if(my_id==0)
+	clog<<"after modify_rhs_tr_0. "<<endl;
    // push boundary nodes circuit's blocks
-   push_bd_nodes(pg, my_id); 
+   push_bd_nodes(pg, my_id);
+   clog<<"after push bd nodes. "<<endl;
+ 
    // get path_b, path_x, len_path_b, len_path_x
   for(size_t i=0;i<block_vec.size();i++){   
   	block_vec[i]->build_path_graph();
+	clog<<"after build_path_graph. "<<endl;
 	block_vec[i]->find_super();
+	clog<<"after find super. "<<endl;
 	// block_vec[i]->solve_eq_sp(block_vec[i]->xp, block_vec[i]->bnewp);
   }
 
@@ -780,12 +786,15 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	   for(size_t j=0;j<block_vec[i]->count;j++)
 		   cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
    }*/
+
+   if(my_id==0)
+	clog<<"before solve 1st step. "<<endl;
    // clog<<"before solve first step. "<<endl; 
    solve_tr_step(num_procs, my_id, mpi_class);
-   /*if(my_id==0){
+   if(my_id==0){
 	cout<<endl<<" first time step sol: "<<endl;
 	cout<<nodelist<<endl;
-   }*/
+   }
 
    //save_tr_nodes(tran, xp);
    // for(size_t i=0;i<block_vec.size();i++)

@@ -101,7 +101,7 @@ int main(int argc, char * argv[]){
 	if(my_id==0) clog<<"num_procs: "<<num_procs<<endl;	
 
 	open_logfile(logfile);
-#if 0
+//#if 0
 	// FILE *oof;
 	stringstream ss;
 	ss<<output<<"_"<<my_id;
@@ -113,7 +113,7 @@ int main(int argc, char * argv[]){
 	
 	if( freopen(ss.str().c_str(), "w", stdout) == NULL )
 		report_exit("Ouptut file error\n");
-#endif
+//#endif
 	Circuit::set_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
 	MPI_CLASS::set_parameters(x_blocks, y_blocks, mpi_olap_ratio);
@@ -152,7 +152,7 @@ int main(int argc, char * argv[]){
 	double mpi_t11, mpi_t12;
 	mpi_t11 = MPI_Wtime();
 //#if 0	
-	for(size_t i=0;i<cktlist.size();i++){
+	for(size_t i=1;i<cktlist.size();i++){
 		Circuit * ckt = cktlist[i];
 		// if(ckt->get_name() != "VDD")
 			// continue;
