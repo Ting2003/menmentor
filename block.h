@@ -107,6 +107,9 @@ public:
 	// ****************functions and members for sp_v methods ***
         Path_Graph pg;
         int *path_b, *path_x;
+	int* s_col_FFS;
+	int* s_col_FBS;
+
 	// double *temp;
         // int *id_map;
         int len_path_b, len_path_x;
@@ -115,8 +118,13 @@ public:
 	void build_id_map();
         void update_node_set_bx();
         void parse_path_table();
+	void find_super();
+	void solve_eq_sp(double *X, double *bnewp);
+	void delete_paths();
 
-	void build_path_graph_top(Tran &tran);
+	void push_nd_pg_x(Node *nd);
+	void push_nd_pg_b(Node *nd);
+	void push_nd_set_bx(Tran &tran);
         void build_path_graph();
         void build_FFS_path();
         void build_FBS_path();

@@ -723,7 +723,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	// link transient nodes
 	link_ckt_nodes(tran, my_id);
 	for(size_t i=0;i<block_vec.size();i++){
-		block_vec[i]->flag_ck = 0;
+		// block_vec[i]->flag_ck = 0;
 		block_vec[i]->stamp_matrix_tr(my_id, mpi_class, tran);
 		
 		block_vec[i]->make_A_symmetric_tr(my_id, tran);	   
@@ -759,48 +759,22 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    // already push back cap and induc into set_x and b
    for(size_t i=0;i<block_vec.size();i++){
    	block_vec[i]->modify_rhs_tr_0(block_vec[i]->bnewp, block_vec[i]->xp, my_id);
-  	block_vec[i]->build_path_graph_top(tran);	
+	// push node_set_b and part of set_x
+  	block_vec[i]->push_nd_set_bx(tran);
    }
    
    // if(my_id==0)
 	//   clog<<"after modify_rhs_tr_0. "<<endl;
-#if 0
-   // push rhs node into node_set b
-   for(size_t i=0;i<n;i++){
-	   if(block_info.bnewp[i] !=0)
-		   pg.node_set_b.push_back(i);
-   }
-
-   // push back all nodes in output list
-   vector<size_t>::iterator it;
-   size_t id;
-   for(size_t i=0;i<tran.nodes.size();i++){
-	   if(tran.nodes[i].node == NULL) continue;
-	   if(!tran.nodes[i].node->rep->is_ground()){
-		   id = tran.nodes[i].node->rep->rid;
-		   it = find(pg.node_set_x.begin(), pg.node_set_x.end(), 
-				   id);
-		   if(it == pg.node_set_x.end()){
-			   pg.node_set_x.push_back(id);
-		   }
-	   }
-   }
-   
-   // then push back boundary nodes into node_se_x
+   // push boundary nodes circuit's blocks
    push_bd_nodes(pg, my_id); 
    // get path_b, path_x, len_path_b, len_path_x
-   build_path_graph();
- 
-   s_col_FFS = new int [len_path_b];
-   s_col_FBS = new int [len_path_x];
-   find_super();
-#endif
+  for(size_t i=0;i<block_vec.size();i++){   
+  	block_vec[i]->build_path_graph();
+	block_vec[i]->find_super();
+	// block_vec[i]->solve_eq_sp(block_vec[i]->xp, block_vec[i]->bnewp);
+  }
 
-   //if(my_id==0)
-	   //clog<<"before first time step. "<<endl;
-   //for(size_t i=0;i<replist.size();i++)
-   // solve_eq_sp(block_info.xp, block_info.bnewp);
-   /*if(my_id==0)
+      /*if(my_id==0)
 	   cout<<nodelist<<endl;
    for(size_t i=0;i<block_vec.size();i++){
 	   for(size_t j=0;j<block_vec[i]->count;j++)
@@ -866,8 +840,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
    save_ckt_nodes_to_tr(tran);
    release_ckt_nodes(tran);
-   /*delete [] s_col_FFS;
-   delete [] s_col_FBS;*/
+   for(size_t i=0;i<block_vec.size();i++){
+	block_vec[i]->delete_paths();
+   }
 // #endif
 #if 0
 	/////////// release resources
@@ -2905,79 +2880,33 @@ void Circuit::find_super(){
 
 // push the 8 set of internal bd nodes into node_set_x
 void Circuit::push_bd_nodes(Path_Graph &pg, int&my_id){
-	vector<size_t>::iterator it;
-	size_t id;
+	// name of the internal_nodelist set
+	NodePtrVector internal_set;
+
 	// sw direction
-	size_t n_sw = internal_nodelist_sw.size();
-	for(size_t i=0;i<n_sw;i++){
-		id = internal_nodelist_sw[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_sw;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// s direction
-	size_t n_s = internal_nodelist_s.size();
-	for(size_t i=0;i<n_s;i++){
-		id = internal_nodelist_s[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_s;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// se direction
-	size_t n_se = internal_nodelist_se.size();
-	for(size_t i=0;i<n_se;i++){
-		id = internal_nodelist_se[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_se;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// w direction
-	size_t n_w = internal_nodelist_w.size();
-	for(size_t i=0;i<n_w;i++){
-		id = internal_nodelist_w[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_w;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// e direction
-	size_t n_e = internal_nodelist_e.size();
-	for(size_t i=0;i<n_e;i++){
-		id = internal_nodelist_e[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_w;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// nw direction
-	size_t n_nw = internal_nodelist_nw.size();
-	for(size_t i=0;i<n_nw;i++){
-		id = internal_nodelist_nw[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_nw;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// n direction
-	size_t n_n = internal_nodelist_n.size();
-	for(size_t i=0;i<n_n;i++){
-		id = internal_nodelist_n[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
-
+	internal_set = internal_nodelist_n;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// ne direction
-	size_t n_ne = internal_nodelist_ne.size();
-	for(size_t i=0;i<n_ne;i++){
-		id = internal_nodelist_ne[i]->rep->rid;
-		it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
-		if(it == pg.node_set_x.end())
-			pg.node_set_x.push_back(id);
-	}
+	internal_set = internal_nodelist_ne;
+	push_bd_nodes_one_set(pg, my_id, internal_set);
 }
 
 // solve transient version
@@ -3348,4 +3277,20 @@ void Circuit::clean_explore(){
 	// clean nodelist and netlist
 	pre_release_circuit();	
 	// clog<<"after pre release circuit. "<<endl;
+}
+
+void Circuit::push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set){
+	vector<size_t>::iterator it;
+	Node *nd;
+	size_t id;
+	// s direction
+	size_t n_s = internal_set.size();
+	for(size_t i=0;i<n_s;i++){
+		nd = internal_set[i]->rep;
+		for(int j=0;j<block_vec.size();j++){
+			if(!block_vec[j]->node_in_block(nd))
+				continue;
+			block_vec[j]->push_nd_pg_x(nd);
+		}
+	}
 }
