@@ -75,8 +75,8 @@ void Block::solve_CK_tr(){
 	x_ck = cholmod_solve(CHOLMOD_A, L, bnew_temp, cm);
 	xp = static_cast<double *>(x_ck->x);
 #endif
-	for(size_t i=0;i<count;i++)
-		cout<<"i, xp: "<<i<<" "<<xp[i]<<endl;
+	// for(size_t i=0;i<count;i++)
+		// cout<<"i, xp: "<<i<<" "<<xp[i]<<endl;
 	//cholmod_solve_new(CHOLMOD_A, L, b_new_ck, x_ck, cm);
 }
 
@@ -304,7 +304,6 @@ void Block::stamp_matrix(int &my_id, MPI_CLASS &mpi_class){
 		cout<<A<<endl;
 	}*/
 	if(count >0){
-		cout<<"DC decomp matrix. "<<endl;
 		CK_decomp(A, cm);
 		// A.clear();
 		//if(cm->status ==1)
@@ -1422,8 +1421,6 @@ void Block::push_nd_set_bx(Tran &tran){
  
 void Block::build_path_graph(){
    build_FFS_path();
-   for(size_t i=0;i<count;i++)
-	cout<<"i, nd, bp, new: "<<nd_IdMap[replist[i]]<<" "<<*replist[i]<<" "<<replist[i]->pt<<" "<<bp[i]<<endl;
    build_FBS_path();
 
    // only keep the 2 paths, switch from List into array
@@ -1678,7 +1675,6 @@ void Block::solve_eq_sp(double *X, double *bnewp){
        X[i] = bnewp[i];
 	// cout<<"i, bnew: "<<i<<" "<<bnewp[i]<<endl;
     }
-    cout<<"len_path_b and x: "<<len_path_b<<" "<<len_path_x<<endl; 
     // FFS solve
     for(k=0; k < len_path_b;){
        j = path_b[k];

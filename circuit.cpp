@@ -719,7 +719,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 		block_vec[i]->reset_array(block_vec[i]->bp);
 		block_vec[i]->reset_array(block_vec[i]->bnewp);
 	}
-	cout<<"start transient and sparse graph. "<<endl;	
 	/***** solve tran *********/
 	// link transient nodes
 	link_ckt_nodes(tran, my_id);
@@ -760,9 +759,9 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
  
    // get path_b, path_x, len_path_b, len_path_x
   for(size_t i=0;i<block_vec.size();i++){   
-  	// block_vec[i]->build_path_graph();
-	// block_vec[i]->find_super();
-	block_vec[i]->test_path_super();
+  	block_vec[i]->build_path_graph();
+	block_vec[i]->find_super();
+	// block_vec[i]->test_path_super();
 	// block_vec[i]->solve_eq_sp(block_vec[i]->xp, block_vec[i]->bnewp);
   }
 
@@ -778,7 +777,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    // clog<<"before solve first step. "<<endl; 
    
    solve_tr_step(num_procs, my_id, mpi_class);
-
+#if 0
    if(my_id==0){
 	cout<<endl<<" first time step sol: "<<endl;
 	for(size_t i=0;i<replist.size();i++){
@@ -786,7 +785,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	}
 	// cout<<nodelist<<endl;
    }
-
+#endif
    //save_tr_nodes(tran, xp);
    // for(size_t i=0;i<block_vec.size();i++)
 	save_ckt_nodes(tran);//, block_vec[i]->xp);
@@ -794,7 +793,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    time += tran.step_t;
    MPI_Barrier(MPI_COMM_WORLD);
 
-   return 0;
+  // return 0;
    int iter = 0;
    clock_t tr_ts, tr_te;
    //if(my_id==0)
@@ -915,6 +914,7 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 		}
 		//solve_eq_sp(block_info.xp, block_info.bnewp);
 			//block_info.xp = static_cast<double *>(block_info.x_ck->x);
+		
 		double local_diff = 
 			block_vec[i]->modify_voltage(my_id);
 		if(local_diff > diff)
@@ -942,7 +942,7 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 
 	MPI_Reduce(&diff, &diff_root, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 	//MPI_Barrier(MPI_COMM_WORLD);
-	MPI_Bcast(&diff_root, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);	
+	MPI_Bcast(&diff_root, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	return diff_root;
 }
 // solve blocks with mpi: multi-core
@@ -2925,16 +2925,18 @@ bool Circuit::solve_tr_step(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	double t1, t2;		
 
 	t1= MPI_Wtime();
-	while( iter < 1){//MAX_ITERATION ){
+	while( iter < MAX_ITERATION ){
 		diff = solve_iteration_tr(my_id, iter, num_procs, mpi_class);
 		iter++;
-		if(my_id ==0)
-			clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
+		// if(my_id ==0)
+			// clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
 		if( diff < EPSILON ){
 			successful = true;
 			break;
 		}
 	}
+	// if(my_id==0)
+		// clog<<"after solve tr. "<<endl;
 	// copy the values from replist to nodelist
 	for(size_t i=0;i<nodelist.size()-1;i++){
 		Node *nd = nodelist[i];

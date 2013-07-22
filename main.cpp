@@ -152,7 +152,7 @@ int main(int argc, char * argv[]){
 	double mpi_t11, mpi_t12;
 	mpi_t11 = MPI_Wtime();
 //#if 0	
-	for(size_t i=1;i<cktlist.size();i++){
+	for(size_t i=0;i<cktlist.size();i++){
 		Circuit * ckt = cktlist[i];
 		// if(ckt->get_name() != "VDD")
 			// continue;
@@ -167,8 +167,8 @@ int main(int argc, char * argv[]){
 		MPI_Barrier(MPI_COMM_WORLD);
 		// clog<<"after barrier: "<<my_id<<endl;
 	}
-	// if(my_id==0)
-	 	// tran.print_tr_nodes();
+	if(my_id==0)
+	 	tran.print_tr_nodes();
 
 	mpi_t12 = MPI_Wtime();
 	
