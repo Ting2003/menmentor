@@ -750,6 +750,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    // already push back cap and induc into set_x and b
    for(size_t i=0;i<block_vec.size();i++){
    	block_vec[i]->modify_rhs_tr_0(block_vec[i]->bnewp, block_vec[i]->xp, my_id);
+
 	// push node_set_b and part of set_x
   	block_vec[i]->push_nd_set_bx(tran);
    }
@@ -775,14 +776,17 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    if(my_id==0)
 	clog<<"before solve 1st step. "<<endl;
    // clog<<"before solve first step. "<<endl; 
+   
    solve_tr_step(num_procs, my_id, mpi_class);
+
    if(my_id==0){
 	cout<<endl<<" first time step sol: "<<endl;
 	for(size_t i=0;i<replist.size();i++){
 		cout<<"i, nd: "<<i<<" "<<replist[i]->name<<" "<<replist[i]->pt<<" "<<replist[i]->value<<endl;
 	}
-	cout<<nodelist<<endl;
+	// cout<<nodelist<<endl;
    }
+
    //save_tr_nodes(tran, xp);
    // for(size_t i=0;i<block_vec.size();i++)
 	save_ckt_nodes(tran);//, block_vec[i]->xp);
@@ -871,6 +875,7 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 		assign_bd_array(my_id);
 	}
 	if(iter == 0){
+
 		// reset_bd_array(my_id);
 		// reset_replist(my_id);
 		for(size_t i=0;i<block_vec.size();i++){
@@ -879,6 +884,7 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 	}
 	
 	for(size_t i=0;i<block_vec.size();i++){
+
 		block_vec[i]->update_rhs(
 			block_vec[i]->bnewp_temp, 
 			block_vec[i]->bnewp, my_id);

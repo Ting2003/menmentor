@@ -190,7 +190,7 @@ void Algebra::CK_decomp(Matrix &A, cholmod_factor *&L, cholmod_common *cm){
 	cholmod_free_triplet(&T, cm);
 	//return;
 	//cm->supernodal = -1;
-	cm->final_ll = true;
+	// cm->final_ll = true;
 	L = cholmod_analyze(A_cholmod, cm);
 	//L->ordering = CHOLMOD_NATURAL;
 	cholmod_factorize(A_cholmod, L, cm);

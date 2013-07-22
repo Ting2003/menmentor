@@ -70,13 +70,13 @@ void Block::CK_decomp(Matrix & A, cholmod_common *cm){
 }
 
 void Block::solve_CK_tr(){
-	// solve_eq_sp(xp, bnewp_temp);
-// #if 0
+	solve_eq_sp(xp, bnewp_temp);
+ #if 0
 	x_ck = cholmod_solve(CHOLMOD_A, L, bnew_temp, cm);
 	xp = static_cast<double *>(x_ck->x);
-//#endif
+#endif
 	for(size_t i=0;i<count;i++)
-		clog<<"i, bnewp, xp: "<<i<<" "<<bnewp_temp[i]<<" "<<xp[i]<<endl;
+		cout<<"i, xp: "<<i<<" "<<xp[i]<<endl;
 	//cholmod_solve_new(CHOLMOD_A, L, b_new_ck, x_ck, cm);
 }
 
@@ -569,9 +569,14 @@ double Block::modify_voltage(int &my_id){
 	for(size_t i=0;i<count;i++){
 		//xp[i] = (1-OMEGA)*x_old[i] + OMEGA*
 			// xp[i];
-		double vol_old = replist[i]->value;
+		// double vol_old = replist[i]->value;
 		// update block nodes value
-		replist[i]->value = xp[i];
+		// replist[i]->value = xp[i];
+		double vol_old = replist[i]->value;
+		int id = nd_IdMap[replist[i]];
+		// update block nodes value
+		replist[i]->value = xp[id];//xp[i];
+
 		double diff = fabs(replist[i]->value - vol_old);
 		// double diff = fabs(replist[i]->value - x_old[i]);
 		if( diff > max_diff ) max_diff = diff;
@@ -1227,13 +1232,13 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 	//clog<<"Geq is: "<<2*net->value / tran.step_t<<endl;
 	if(!nk->is_ground()&& nk->isS()!=Y){
 		 rhs[k] += Ieq;	// for VDD circuit
-		 //if(my_id==0)
-		    //cout<<k<<" "<<*nk<<" rhs +: "<<rhs[k]<<endl;
+		 // if(my_id==0)
+		    // cout<<k<<" "<<*nk<<" rhs +: "<<rhs[k]<<endl;
 	}
 	if(!nl->is_ground()&& nl->isS()!=Y){
 		 rhs[l] += -Ieq; 
-		 //if(my_id==0)
-		    //cout<<l<<" "<<*nl<<" rhs +: "<<rhs[l]<<endl;
+		 // if(my_id==0)
+		    // cout<<l<<" "<<*nl<<" rhs +: "<<rhs[l]<<endl;
 	}
 	// if(my_id==0)
 		//clog<<"finish 1 net. "<<endl;
@@ -1359,24 +1364,20 @@ void Block::build_id_map(){
    // then substitute all the nodes rid
    for(size_t i=0;i<count;i++){
 	int id = id_map[i];
-	// cout<<"id_map, old_id, new_id: "<<id<<" "<<nd_IdMap[replist[i]]<<":"<<id<<endl;
-	// update node id within block
-	nd_IdMap[replist[i]] = id;
+	nd_IdMap[replist[id]] = i;
 	// replist[id]->rid = i;
 	temp[i] = bp[i];
    }
 
    for(size_t i=0;i<count;i++){
-	// cout<<"i, nd, bp, new: "<<nd_IdMap[replist[i]]<<" "<<*replist[i]<<" "<<replist[i]->pt<<" "<<bp[i]<<" "<<temp[id_map[i]]<<endl;
-	//cout<<"old_i, new_i: "<<i<<" "<<id_map[i]<<endl;
+	// cout<<"new_i, old_i: "<<id_map[i]<<" "<<i<<endl;
 	bp[i] = temp[id_map[i]];
-	// bp[id_map[i]] = temp[i];
+	// cout<<"id, bp: "<<id_map[i]<<" "<<bp[id_map[i]]<<endl;
    }
    for(size_t i=0;i<count;i++)
         temp[i] = xp[i];
    for(size_t i=0;i<count;i++){
         xp[i] = temp[id_map[i]];
-	// xp[id_map[i]] = temp[i];
 	// cout<<"i, new bp, xp: "<<i<<" "<<bp[i]<<" "<<xp[i]<<endl;
    }
    delete [] temp;
@@ -1664,12 +1665,20 @@ void Block::find_super(){
 }
  
 void Block::solve_eq_sp(double *X, double *bnewp){
+    Lp = static_cast<int *>(L->p);
+    Lx = static_cast<double*> (L->x);
+    Li = static_cast<int*>(L->i) ;
+    Lnz = static_cast<int *>(L->nz);
+
+    // cholmod_print_factor(L, "L", cm);
+
     int p, q, r, lnz, pend;
     int j, k, n = L->n ;
     for(int i=0;i<n;i++){
        X[i] = bnewp[i];
+	// cout<<"i, bnew: "<<i<<" "<<bnewp[i]<<endl;
     }
-    cout<<"len_path_b: "<<len_path_b<<endl; 
+    cout<<"len_path_b and x: "<<len_path_b<<" "<<len_path_x<<endl; 
     // FFS solve
     for(k=0; k < len_path_b;){
        j = path_b[k];
@@ -1686,9 +1695,9 @@ void Block::solve_eq_sp(double *X, double *bnewp){
           /* solve with a single column of L */
           /* -------------------------------------------------------------- */
           double y = X [j] ;
+	  // cout<<"diagonal: j, X[j], Lx[p] "<<j<<" "<<y<<" "<<Lx[p]<<endl;
           if(L->is_ll == true){
              X[j] /= Lx [p] ;
-	     // cout<<"j, X[j] / Lx[p]: "<<j<<" "<<X[j]<<" "<<Lx[p]<<endl;
           }
           for (p++ ; p < pend ; p++)
           {
@@ -1759,6 +1768,7 @@ void Block::solve_eq_sp(double *X, double *bnewp){
     // FBS solve
     for(k = len_path_x - 1; k >=0;){
        j = path_x[k];
+       // cout<<endl<<"col: "<<j<<endl;
        //for(j = n-1; j >= 0; ){
  
        /* get the start, end, and length of column j */
@@ -1776,16 +1786,18 @@ void Block::solve_eq_sp(double *X, double *bnewp){
           /* -------------------------------------------------------------- */
  
           double d = Lx [p] ;
-          if(L->is_ll == false)
+          if(L->is_ll == false){
+	     // cout<<"j, d, X: "<<j<<" "<<d<<" "<<X[j];
              X[j] /= d ;
+	     // cout<<" new X: "<<X[j]<<endl;
+	  }
           for (p++ ; p < pend ; p++)
           {
+	     // cout<<"off-diagonal: Lx[p], X[Li[p]]: "<<Lx[p]<<" "<<X[Li[p]]<<endl;
              X[j] -= Lx [p] * X [Li [p]] ;
           }
           if(L->is_ll == true){
-	     cout<<"j, d, X: "<<j<<" "<<d<<" "<<X[j];
              X [j] /=  d ;
-	     cout<<" new X: "<<X[j]<<endl;
 	  }
           k--;
        }
@@ -1886,7 +1898,7 @@ void Block::test_path_super(){
    	path_x = new int [len_path_x];
 	for(size_t i=0;i<count;i++){
 		path_b[i] = i;
-		path_x[i] = count-1-i;	
+		path_x[i] = i;	
 		s_col_FFS[i] = 1;
 		s_col_FBS[i] = 1;
 	}
