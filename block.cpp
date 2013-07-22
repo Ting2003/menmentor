@@ -67,20 +67,16 @@ void Block::free_block_cholmod(cholmod_common *cm){
 
 void Block::CK_decomp(Matrix & A, cholmod_common *cm){
 	Algebra::CK_decomp(A, L, cm);
-	Lp = static_cast<int *>(L->p);
-   	Lx = static_cast<double*> (L->x);
-   	Li = static_cast<int*>(L->i) ;
-   	Lnz = static_cast<int *>(L->nz);
 }
 
 void Block::solve_CK_tr(){
-	solve_eq_sp(xp, bnewp_temp);
-#if 0
+	// solve_eq_sp(xp, bnewp_temp);
+// #if 0
 	x_ck = cholmod_solve(CHOLMOD_A, L, bnew_temp, cm);
 	xp = static_cast<double *>(x_ck->x);
-#endif
-	// for(size_t i=0;i<count;i++)
-		// clog<<"i, xp: "<<i<<" "<<xp[i]<<endl;
+//#endif
+	for(size_t i=0;i<count;i++)
+		clog<<"i, bnewp, xp: "<<i<<" "<<bnewp_temp[i]<<" "<<xp[i]<<endl;
 	//cholmod_solve_new(CHOLMOD_A, L, b_new_ck, x_ck, cm);
 }
 
@@ -308,6 +304,7 @@ void Block::stamp_matrix(int &my_id, MPI_CLASS &mpi_class){
 		cout<<A<<endl;
 	}*/
 	if(count >0){
+		cout<<"DC decomp matrix. "<<endl;
 		CK_decomp(A, cm);
 		// A.clear();
 		//if(cm->status ==1)
@@ -591,6 +588,7 @@ void Block::build_nd_IdMap(){
 		id_pair.first = replist[i];
 		id_pair.second = i;
 		nd_IdMap.insert(id_pair);
+		// clog<<"i, rep, id: "<<i<<" "<<*replist[i]<<" "<<replist[i]->pt<<" "<<replist[i]->rid<<endl;
 	}
 }
 
@@ -893,6 +891,10 @@ void Block::clear_A(){
 
 void Block::CK_decomp(){
 	Algebra::CK_decomp(A, L, cm);
+	Lp = static_cast<int *>(L->p);
+   	Lx = static_cast<double*> (L->x);
+   	Li = static_cast<int*>(L->i) ;
+   	Lnz = static_cast<int *>(L->nz);
 }
 
 void Block::copy_vec(double *bnewp, double *bp){
@@ -916,6 +918,9 @@ void Block::modify_rhs_tr_0(double * b, double *x, int &my_id){
 			}
 		}
 	}
+	/*for(size_t i=0;i<replist.size();i++){
+		cout<<"nd, id, b: "<<*replist[i]<<" "<<replist[i]->pt<<" "<<nd_IdMap[replist[i]]<<" "<<bp[nd_IdMap[replist[i]]]<<endl;
+	}*/
 }
 
 // stamp transient current values into rhs
@@ -1146,11 +1151,11 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 	}
 #endif
 	// if(my_id==0)
-	//clog<<"nk, nl: "<<*nk<<" "<<*nl<<endl;
+		// cout<<"nk, nl: "<<*nk<<" "<<nk->pt<<" "<<*nl<<endl;
 	size_t k = nd_IdMap[nk];//nk->rid;
 	size_t l = nd_IdMap[nl];//nl->rid;
-	//if(my_id==0)
-	//clog<<"k, l: "<<k<<" "<<l<<" "<<nk->flag_bd<<" "<<nl->flag_bd<<endl;
+	// if(my_id==0)
+		// cout<<"k, l: "<<k<<" "<<l<<" "<<nk->flag_bd<<" "<<nl->flag_bd<<endl;
 	Net *nbr_resis = NULL;
 	for(size_t i=0;i<nk->nbr_vec.size();i++){
 		Net *nbr_net = nk->nbr_vec[i];
@@ -1188,12 +1193,13 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
         //clog<<*nk<<" "<<k<<endl;
 //#if 0
         pg.node_set_x.push_back(k);
+	// cout<<"push x: "<<k<<" "<<*nk<<endl;
         if(!nl->is_ground()) {
-              //clog<<*nl<<" "<<l<<endl;
+           // cout<<"push x: "<<l<<" "<<*nl<<endl;
            pg.node_set_x.push_back(l);
         }
         else if(!b->is_ground()){
-              //clog<<*b<<" "<<id_b<<endl;
+           // cout<<"push x: "<<id_b<<" "<<*b<<endl;
            pg.node_set_x.push_back(id_b);
         }
 //#endif
@@ -1215,18 +1221,19 @@ void Block::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
 	//clog<<"nk-nl "<<(nk->value - nl->value)<<" "<<2*net->value/tran.step_t<<" "<<temp<<endl;
 	
 	Ieq  = (i_t + temp);
+	// cout<<"it, temp: "<<i_t<<" "<<temp<<endl;
 	//if(my_id==0)
 	//clog<< "Ieq is: "<<Ieq<<endl;
 	//clog<<"Geq is: "<<2*net->value / tran.step_t<<endl;
 	if(!nk->is_ground()&& nk->isS()!=Y){
 		 rhs[k] += Ieq;	// for VDD circuit
-		 //if(my_id==1)
-		    // clog<<k<<" "<<*nk<<" rhs +: "<<rhs[k]<<endl;
+		 //if(my_id==0)
+		    //cout<<k<<" "<<*nk<<" rhs +: "<<rhs[k]<<endl;
 	}
 	if(!nl->is_ground()&& nl->isS()!=Y){
 		 rhs[l] += -Ieq; 
-		 //if(my_id==1)
-		    // clog<<l<<" "<<*nl<<" rhs +: "<<rhs[l]<<endl;
+		 //if(my_id==0)
+		    //cout<<l<<" "<<*nl<<" rhs +: "<<rhs[l]<<endl;
 	}
 	// if(my_id==0)
 		//clog<<"finish 1 net. "<<endl;
@@ -1340,26 +1347,38 @@ void Block::stamp_bd_net(int my_id, Net *net){
 	}
 }
 
+// also update nd_IdMap for rank of each nd
 void Block::build_id_map(){
    double *temp;
    int *id_map;
    id_map = new int [count];
+   
    cholmod_build_id_map(CHOLMOD_A, L, cm, id_map);
 
    temp = new double [count];
    // then substitute all the nodes rid
    for(size_t i=0;i<count;i++){
 	int id = id_map[i];
-	replist[id]->rid = i;
+	// cout<<"id_map, old_id, new_id: "<<id<<" "<<nd_IdMap[replist[i]]<<":"<<id<<endl;
+	// update node id within block
+	nd_IdMap[replist[i]] = id;
+	// replist[id]->rid = i;
 	temp[i] = bp[i];
    }
 
-   for(size_t i=0;i<count;i++)
+   for(size_t i=0;i<count;i++){
+	// cout<<"i, nd, bp, new: "<<nd_IdMap[replist[i]]<<" "<<*replist[i]<<" "<<replist[i]->pt<<" "<<bp[i]<<" "<<temp[id_map[i]]<<endl;
+	//cout<<"old_i, new_i: "<<i<<" "<<id_map[i]<<endl;
 	bp[i] = temp[id_map[i]];
+	// bp[id_map[i]] = temp[i];
+   }
    for(size_t i=0;i<count;i++)
         temp[i] = xp[i];
-   for(size_t i=0;i<count;i++)
+   for(size_t i=0;i<count;i++){
         xp[i] = temp[id_map[i]];
+	// xp[id_map[i]] = temp[i];
+	// cout<<"i, new bp, xp: "<<i<<" "<<bp[i]<<" "<<xp[i]<<endl;
+   }
    delete [] temp;
    delete [] id_map;
 }
@@ -1370,41 +1389,41 @@ void Block::push_nd_set_bx(Tran &tran){
       for(size_t i=0;i<count;i++){
          if(bnewp[i] !=0)
             pg.node_set_b.push_back(i);
-     // } 
+     } 
 
       // push back all nodes in output list
       vector<size_t>::iterator it;
       size_t id;
+      // clog<<"tran.nodes.size: "<<tran.nodes.size()<<endl;
       for(size_t i=0;i<tran.nodes.size();i++){
-         if(tran.nodes[i].node == NULL) continue;
-	 // only handles inside block nd
+         if(tran.nodes[i].node == NULL){
+		// clog<<"null node. "<<endl;
+		 continue;
+	}
+	// only handles inside block nd
 	 if(!node_in_block(tran.nodes[i].node->rep))
 		continue;
+
+	// clog<<"i, node in block=======: "<<i<<" "<<*tran.nodes[i].node->rep<<endl;
          if(!tran.nodes[i].node->rep->is_ground()){
-            id = tran.nodes[i].node->rep->rid;
+            id = nd_IdMap[tran.nodes[i].node->rep];//->rid;
             it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
             if(it == pg.node_set_x.end()){
                pg.node_set_x.push_back(id);
+	       // cout<<"push nd, id: "<<*tran.nodes[i].node->rep<<" "<<tran.nodes[i].node->rep->pt<<" "<<id<<endl;
             }
          } 
       }
-
-      // then push back boundary nodes into node_se_x
-      // push_bd_nodes(pg, my_id); 
-
-      // get path_b, path_x, len_path_b, len_path_x
-      // build_path_graph();
       //clog<<"len_b, x to n: "<<len_path_b<<" "<<
         // len_path_x<<" "<<count<<endl;
-   }
    // clog<<"build up path time: "<<1.0*(t2-t1)/CLOCKS_PER_SEC<<endl;   
 }
  
 void Block::build_path_graph(){
    build_FFS_path();
-   clog<<"after build FFS path. "<<endl;
+   for(size_t i=0;i<count;i++)
+	cout<<"i, nd, bp, new: "<<nd_IdMap[replist[i]]<<" "<<*replist[i]<<" "<<replist[i]->pt<<" "<<bp[i]<<endl;
    build_FBS_path();
-   clog<<"after build two paths. "<<endl;
 
    // only keep the 2 paths, switch from List into array
    len_path_b = pg.path_FFS.get_size();
@@ -1415,18 +1434,24 @@ void Block::build_path_graph(){
    
    Node_G *nd;
    nd = pg.path_FFS.first;
+   // clog<<"FFS nd: "<<*nd;
    for(int i=0;i<len_path_b;i++){
       path_b[i] = nd->value;
-      if(nd->next != NULL)
+      if(nd->next != NULL){
          nd = nd->next;
+	// clog<<"FFS nd: "<<*nd;
+      }
    }
    pg.path_FFS.destroy_list();
 
    nd = pg.path_FBS.first;
+   // clog<<"FBS nd: "<<*nd;
    for(int i=0;i<len_path_x;i++){
       path_x[i] = nd->value;
-      if(nd->next != NULL)
+      if(nd->next != NULL){
          nd = nd->next;
+	// clog<<"FBS nd: "<<*nd;
+      }
    }
    pg.path_FBS.destroy_list();
 
@@ -1439,6 +1464,10 @@ void Block::build_FFS_path(){
    parse_path_table();
    set_up_path_table();
 
+   // for(size_t i=0;i<pg.node_set_b.size();i++)
+	// cout<<"set_b, nd: "<<" "<<pg.node_set_b[i]<<endl;
+
+// #endif
    find_path(pg.node_set_b, pg.path_FFS);
    pg.path_FFS.assign_size();
 
@@ -1449,9 +1478,11 @@ void Block::build_FFS_path(){
 void Block::build_FBS_path(){
   pg.nodelist.clear();
   parse_path_table();
-  clog<<"FBS after parse path table. "<<endl;
   set_up_path_table();
-  clog<<"FBS after set up path table. "<<endl;
+  // clog<<"node_set_x size: "<<pg.node_set_x.size()<<endl;
+  // for(size_t i=0;i<pg.node_set_x.size();i++)
+	// cout<<"i, set_x, nd: "<<i<<" "<<pg.node_set_x[i]<<" "<<*replist[pg.node_set_x[i]]<<" "<<replist[pg.node_set_x[i]]->pt<<endl;
+
   find_path(pg.node_set_x, pg.path_FBS);
    pg.path_FBS.assign_size();
 }
@@ -1483,8 +1514,10 @@ void Block::set_up_path_table(){
       if(lnz >1) 
          e = Li[p+1];
 
-      if(s<e)
+      if(s<e){
+	 // clog<<"nd, next: "<<*pg.nodelist[s]<<" "<<*pg.nodelist[e];
          pg.nodelist[s]->next = pg.nodelist[e];
+      }
    }
 }
 
@@ -1507,6 +1540,8 @@ void Block::find_path(vector<size_t> &node_set, List_G &path){
       pg.nodelist[id] = pg.nodelist[id]->next;
    }while(pg.nodelist[id]->value != ne->value);
    path.add_node(ne);
+   ne->flag = 1;
+   // clog<<"path add nd: "<<*ne;
 
    for(size_t i=0; i<node_set.size();i++){
       int id = node_set[i];
@@ -1528,8 +1563,8 @@ void Block::find_path(vector<size_t> &node_set, List_G &path){
 
    //clog<<"insert_list.size: "<<insert_list.size()<<endl;
    sort(insert_list.begin(), insert_list.end(), compare_Node_G);
-   //for(int i=0;i<insert_list.size();i++)
-      //clog<<"i, insert: "<<i<<" "<<*insert_list[i]<<endl;
+   // for(int i=0;i<insert_list.size();i++)
+      // clog<<"i, insert: "<<i<<" "<<*insert_list[i]<<endl;
 
    //clog<<"path: "<<&path<<endl;
    // p is the old pointer to the list
@@ -1553,7 +1588,7 @@ void Block::find_path(vector<size_t> &node_set, List_G &path){
 void Block::push_nd_pg_x(Node *nd){
 	vector<size_t>::iterator it;
 	size_t id;
-	id = nd->rid;
+	id = nd_IdMap[nd];//->rid;
 	it = find(pg.node_set_x.begin(), pg.node_set_x.end(), id);
 	if(it == pg.node_set_x.end())
 		pg.node_set_x.push_back(id);
@@ -1561,9 +1596,13 @@ void Block::push_nd_pg_x(Node *nd){
 
  // find super node columns for path_b and path_x
 void Block::find_super(){
-    clog<<"len_path_b and x: "<<len_path_b<<" "<<len_path_x<<endl;
     s_col_FFS = new int [len_path_b];
     s_col_FBS = new int [len_path_x];
+    for(size_t i=0;i<len_path_b;i++)
+	s_col_FFS[i] = 0;
+
+    for(size_t i=0;i<len_path_x;i++)
+	s_col_FBS[i] = 0;
     
     // int *Lp, *Li, *Lnz;
     // Lp = static_cast<int *> (L->p);
@@ -1592,7 +1631,11 @@ void Block::find_super(){
           k+=3;
        }
     }
+#if 0
     clog<<"finish ffs loop. "<<endl;
+    for(size_t i=0;i<len_path_b;i++)
+	clog<<"i, super_B: "<<i<<" "<<s_col_FFS[i]<<endl;
+#endif
     //FBS loop
     for(k=len_path_x-1;k>=0;){
        j = path_x[k];
@@ -1613,6 +1656,11 @@ void Block::find_super(){
           k-=3;
        }
     }
+#if 0
+    clog<<endl;
+    for(int i=len_path_x-1;i>=0;i--)
+	clog<<"i, super_X: "<<i<<" "<<s_col_FBS[i]<<endl;
+#endif
 }
  
 void Block::solve_eq_sp(double *X, double *bnewp){
@@ -1621,6 +1669,7 @@ void Block::solve_eq_sp(double *X, double *bnewp){
     for(int i=0;i<n;i++){
        X[i] = bnewp[i];
     }
+    cout<<"len_path_b: "<<len_path_b<<endl; 
     // FFS solve
     for(k=0; k < len_path_b;){
        j = path_b[k];
@@ -1639,9 +1688,11 @@ void Block::solve_eq_sp(double *X, double *bnewp){
           double y = X [j] ;
           if(L->is_ll == true){
              X[j] /= Lx [p] ;
+	     // cout<<"j, X[j] / Lx[p]: "<<j<<" "<<X[j]<<" "<<Lx[p]<<endl;
           }
           for (p++ ; p < pend ; p++)
           {
+	     // cout<<"off diagonal: "<<Lx[p]<<" "<<y<<" "<<X[Li[p]]<<endl;
              X [Li [p]] -= Lx [p] * y ;
           }
           k++ ;  /* advance to next column of L */
@@ -1731,8 +1782,11 @@ void Block::solve_eq_sp(double *X, double *bnewp){
           {
              X[j] -= Lx [p] * X [Li [p]] ;
           }
-          if(L->is_ll == true)
+          if(L->is_ll == true){
+	     cout<<"j, d, X: "<<j<<" "<<d<<" "<<X[j];
              X [j] /=  d ;
+	     cout<<" new X: "<<X[j]<<endl;
+	  }
           k--;
        }
        else if (s_col_FBS[k]==2)//lnz != Lnz [j-2]-2 || Li [Lp [j-2]+2] != j)
@@ -1820,4 +1874,21 @@ void Block::solve_eq_sp(double *X, double *bnewp){
 void Block::delete_paths(){	
    delete [] s_col_FFS;
    delete [] s_col_FBS;
+}
+
+void Block::test_path_super(){
+	len_path_b = count;
+	len_path_x = count;
+	
+    	s_col_FFS = new int [len_path_b];
+    	s_col_FBS = new int [len_path_x];
+   	path_b = new int[len_path_b];
+   	path_x = new int [len_path_x];
+	for(size_t i=0;i<count;i++){
+		path_b[i] = i;
+		path_x[i] = count-1-i;	
+		s_col_FFS[i] = 1;
+		s_col_FBS[i] = 1;
+	}
+
 }

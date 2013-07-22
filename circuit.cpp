@@ -118,6 +118,7 @@ Circuit::~Circuit(){
 	nodelist.clear();
 	replist.clear();
 	mergelist.clear();
+	map_node.clear();
 	block_vec.clear();
 	for(size_t i=0;i<bd_netlist.size();i++)
     		delete bd_netlist[i];
@@ -718,39 +719,27 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 		block_vec[i]->reset_array(block_vec[i]->bp);
 		block_vec[i]->reset_array(block_vec[i]->bnewp);
 	}
-	clog<<"start transient and sparse graph. "<<endl;	
+	cout<<"start transient and sparse graph. "<<endl;	
 	/***** solve tran *********/
 	// link transient nodes
 	link_ckt_nodes(tran, my_id);
 	for(size_t i=0;i<block_vec.size();i++){
 		// block_vec[i]->flag_ck = 0;
-		block_vec[i]->stamp_matrix_tr(my_id, mpi_class, tran);
-		
+		block_vec[i]->stamp_matrix_tr(my_id, mpi_class, tran);	
 		block_vec[i]->make_A_symmetric_tr(my_id, tran);	   
-
 		block_vec[i]->stamp_current_tr(my_id, time);
-		
 		// if(my_id==0)
 			// clog<<block_vec[i]->A<<endl;
 
    		block_vec[i]->CK_decomp();
 //#if 0   
 		block_vec[i]->clear_A();
-		clog<<"block_i, before build id_map: "<<i<<endl;
 		block_vec[i]->build_id_map();
-		clog<<"block_i, after build id_map: "<<i<<endl;
 //#endif
 		// bnewp = bp
 		block_vec[i]->copy_vec(block_vec[i]->bnewp,
 				block_vec[i]->bp);
-	}
-
-   /*********** the following 2 parts can be implemented with pthreads ***/
-   // build id_map immediately after transient factorization
-   size_t n = replist.size();   
-   /*for(size_t i=0;i<replist.size();i++){
-	block_info.bnewp[i] = block_info.bp[i];
-   }*/
+	} 
   
    // set Geq for induc and capac
    set_eq_induc(tran);
@@ -765,18 +754,14 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
   	block_vec[i]->push_nd_set_bx(tran);
    }
    
-   if(my_id==0)
-	clog<<"after modify_rhs_tr_0. "<<endl;
    // push boundary nodes circuit's blocks
    push_bd_nodes(pg, my_id);
-   clog<<"after push bd nodes. "<<endl;
  
    // get path_b, path_x, len_path_b, len_path_x
   for(size_t i=0;i<block_vec.size();i++){   
-  	block_vec[i]->build_path_graph();
-	clog<<"after build_path_graph. "<<endl;
-	block_vec[i]->find_super();
-	clog<<"after find super. "<<endl;
+  	// block_vec[i]->build_path_graph();
+	// block_vec[i]->find_super();
+	block_vec[i]->test_path_super();
 	// block_vec[i]->solve_eq_sp(block_vec[i]->xp, block_vec[i]->bnewp);
   }
 
@@ -793,9 +778,11 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    solve_tr_step(num_procs, my_id, mpi_class);
    if(my_id==0){
 	cout<<endl<<" first time step sol: "<<endl;
+	for(size_t i=0;i<replist.size();i++){
+		cout<<"i, nd: "<<i<<" "<<replist[i]->name<<" "<<replist[i]->pt<<" "<<replist[i]->value<<endl;
+	}
 	cout<<nodelist<<endl;
    }
-
    //save_tr_nodes(tran, xp);
    // for(size_t i=0;i<block_vec.size();i++)
 	save_ckt_nodes(tran);//, block_vec[i]->xp);
@@ -803,7 +790,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    time += tran.step_t;
    MPI_Barrier(MPI_COMM_WORLD);
 
-   // return 0;
+   return 0;
    int iter = 0;
    clock_t tr_ts, tr_te;
    //if(my_id==0)
@@ -2192,7 +2179,12 @@ void Circuit::save_ckt_nodes_to_tr(Tran &tran){
 }
 
 // link transient nodes with nodelist
-void Circuit:: link_ckt_nodes(Tran &tran, int &my_id){ 
+void Circuit:: link_ckt_nodes(Tran &tran, int &my_id){
+      for(size_t j=0;j<tran.nodes.size();j++){
+	tran.nodes[j].node = get_node(tran.nodes[j].name);
+	// if(tran.nodes[j].node)
+	// clog<<"tran nodes: "<<*tran.nodes[j].node<<endl;
+	}
    // clog<<"tran.node size: "<<tran.nodes.size()<<endl;
    Node_TR_PRINT nodes_temp;
    for(size_t i=0;i<nodelist.size();i++){
@@ -2905,7 +2897,7 @@ void Circuit::push_bd_nodes(Path_Graph &pg, int&my_id){
 	internal_set = internal_nodelist_w;
 	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// e direction
-	internal_set = internal_nodelist_w;
+	internal_set = internal_nodelist_e;
 	push_bd_nodes_one_set(pg, my_id, internal_set);
 	// nw direction
 	internal_set = internal_nodelist_nw;
@@ -2927,11 +2919,11 @@ bool Circuit::solve_tr_step(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 	double t1, t2;		
 
 	t1= MPI_Wtime();
-	while( iter < MAX_ITERATION ){
+	while( iter < 1){//MAX_ITERATION ){
 		diff = solve_iteration_tr(my_id, iter, num_procs, mpi_class);
 		iter++;
-		// if(my_id ==0)
-			//clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
+		if(my_id ==0)
+			clog<<"iter, diff: "<<iter<<" "<<diff<<endl;
 		if( diff < EPSILON ){
 			successful = true;
 			break;
@@ -3294,11 +3286,13 @@ void Circuit::push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector int
 	size_t id;
 	// s direction
 	size_t n_s = internal_set.size();
+	// clog<<"ns size: "<<n_s<<endl;
 	for(size_t i=0;i<n_s;i++){
 		nd = internal_set[i]->rep;
 		for(int j=0;j<block_vec.size();j++){
 			if(!block_vec[j]->node_in_block(nd))
 				continue;
+			// clog<<"block j push nd: "<<j<<" "<<*nd<<" "<<nd->pt<<endl;
 			block_vec[j]->push_nd_pg_x(nd);
 		}
 	}

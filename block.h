@@ -119,6 +119,7 @@ public:
         void update_node_set_bx();
         void parse_path_table();
 	void find_super();
+	void test_path_super();
 	void solve_eq_sp(double *X, double *bnewp);
 	void delete_paths();
 

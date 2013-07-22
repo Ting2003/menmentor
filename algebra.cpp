@@ -155,6 +155,8 @@ void Algebra::LU_decomposition(int n, UF_long * Ap, UF_long * Ai, double * Ax,
 
 // doing cholesky decomposition
 void Algebra::CK_decomp(Matrix &A, cholmod_factor *&L, cholmod_common *cm){
+	cm->final_super = false;
+	cm->final_asis = false;
 	// doing factorization first
 	cholmod_triplet * T;
 	size_t n_row = A.get_row();
@@ -188,9 +190,12 @@ void Algebra::CK_decomp(Matrix &A, cholmod_factor *&L, cholmod_common *cm){
 	cholmod_free_triplet(&T, cm);
 	//return;
 	//cm->supernodal = -1;
+	cm->final_ll = true;
 	L = cholmod_analyze(A_cholmod, cm);
 	//L->ordering = CHOLMOD_NATURAL;
 	cholmod_factorize(A_cholmod, L, cm);
+	// cholmod_print_common("CM", cm);
+	// cholmod_print_factor(L, "L", cm);
 	//return;
 	cholmod_free_sparse(&A_cholmod, cm);
 }
