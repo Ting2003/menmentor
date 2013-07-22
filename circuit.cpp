@@ -771,11 +771,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	   for(size_t j=0;j<block_vec[i]->count;j++)
 		   cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
    }*/
-
-   if(my_id==0)
-	clog<<"before solve 1st step. "<<endl;
-   // clog<<"before solve first step. "<<endl; 
-   
+  
    solve_tr_step(num_procs, my_id, mpi_class);
 #if 0
    if(my_id==0){
