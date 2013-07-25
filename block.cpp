@@ -1414,14 +1414,14 @@ void Block::push_nd_set_bx(Tran &tran){
             }
          } 
       }
-      //clog<<"len_b, x to n: "<<len_path_b<<" "<<
-        // len_path_x<<" "<<count<<endl;
-   // clog<<"build up path time: "<<1.0*(t2-t1)/CLOCKS_PER_SEC<<endl;   
 }
  
 void Block::build_path_graph(){
+   clock_t t1, t2;
+   t1 = clock();
    build_FFS_path();
    build_FBS_path();
+   t2 = clock();
 
    // only keep the 2 paths, switch from List into array
    len_path_b = pg.path_FFS.get_size();
@@ -1430,6 +1430,10 @@ void Block::build_path_graph(){
    path_b = new int[len_path_b];
    path_x = new int [len_path_x];
    
+   // clog<<"len_b, x to n: "<<len_path_b<<" "<<len_path_x<<" "<<count<<endl;
+   // if(my_id==0)
+   	// clog<<"build up path time: "<<1.0*(t2-t1)/CLOCKS_PER_SEC<<endl;   
+
    Node_G *nd;
    nd = pg.path_FFS.first;
    // clog<<"FFS nd: "<<*nd;
@@ -1596,12 +1600,13 @@ void Block::push_nd_pg_x(Node *nd){
 void Block::find_super(){
     s_col_FFS = new int [len_path_b];
     s_col_FBS = new int [len_path_x];
+/*
     for(size_t i=0;i<len_path_b;i++)
 	s_col_FFS[i] = 0;
 
     for(size_t i=0;i<len_path_x;i++)
 	s_col_FBS[i] = 0;
-    
+  */  
     // int *Lp, *Li, *Lnz;
     // Lp = static_cast<int *> (L->p);
     // Lnz = (int *)L->nz;
@@ -1662,11 +1667,12 @@ void Block::find_super(){
 }
  
 void Block::solve_eq_sp(double *X, double *bnewp){
+#if 0
     Lp = static_cast<int *>(L->p);
     Lx = static_cast<double*> (L->x);
     Li = static_cast<int*>(L->i) ;
     Lnz = static_cast<int *>(L->nz);
-
+#endif
     // cholmod_print_factor(L, "L", cm);
 
     int p, q, r, lnz, pend;
@@ -1899,4 +1905,23 @@ void Block::test_path_super(){
 		s_col_FBS[i] = 1;
 	}
 
+}
+
+// push the bd nodes from bd_netlist
+void Block::push_bd_nets(){
+	size_t n_s = bd_netlist.size();
+	Net *net;
+	Node *a = NULL; 
+	Node *b = NULL;
+	for(size_t i=0;i<n_s;i++){
+		net = bd_netlist[i];
+		if(net == NULL) 
+			continue;
+		a = net->ab[0];
+		b = net->ab[1];
+		if(node_in_block(a))
+			push_nd_pg_x(a);
+		if(node_in_block(b))
+			push_nd_pg_x(b);
+	}
 }

@@ -101,7 +101,7 @@ int main(int argc, char * argv[]){
 	if(my_id==0) clog<<"num_procs: "<<num_procs<<endl;	
 
 	open_logfile(logfile);
-//#if 0
+#if 0
 	// FILE *oof;
 	stringstream ss;
 	ss<<output<<"_"<<my_id;
@@ -113,7 +113,7 @@ int main(int argc, char * argv[]){
 	
 	if( freopen(ss.str().c_str(), "w", stdout) == NULL )
 		report_exit("Ouptut file error\n");
-//#endif
+#endif
 	Circuit::set_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
 	MPI_CLASS::set_parameters(x_blocks, y_blocks, mpi_olap_ratio);
@@ -167,8 +167,8 @@ int main(int argc, char * argv[]){
 		MPI_Barrier(MPI_COMM_WORLD);
 		// clog<<"after barrier: "<<my_id<<endl;
 	}
-	if(my_id==0)
-	 	tran.print_tr_nodes();
+	// if(my_id==0)
+	 	//tran.print_tr_nodes();
 
 	mpi_t12 = MPI_Wtime();
 	

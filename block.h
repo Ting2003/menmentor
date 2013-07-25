@@ -126,6 +126,7 @@ public:
 	void push_nd_pg_x(Node *nd);
 	void push_nd_pg_b(Node *nd);
 	void push_nd_set_bx(Tran &tran);
+	void push_bd_nets();
         void build_path_graph();
         void build_FFS_path();
         void build_FBS_path();

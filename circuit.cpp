@@ -752,19 +752,45 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 
 	// push node_set_b and part of set_x
   	block_vec[i]->push_nd_set_bx(tran);
+	// push the boundary nodes of blocks
+	block_vec[i]->push_bd_nets();
    }
    
    // push boundary nodes circuit's blocks
    push_bd_nodes(pg, my_id);
- 
+   // push_bd_net_nodes();
+
+  int sum_n_ffs = 0;
+  int sum_n_fbs = 0;
+  int sum_n = 0;
+  int block_flag = 0; 
    // get path_b, path_x, len_path_b, len_path_x
   for(size_t i=0;i<block_vec.size();i++){   
   	block_vec[i]->build_path_graph();
+	sum_n_ffs += block_vec[i]->len_path_b;
+	sum_n_fbs += block_vec[i]->len_path_x;
+	sum_n += block_vec[i]->count;
+	block_flag = 1;
 	block_vec[i]->find_super();
 	// block_vec[i]->test_path_super();
 	// block_vec[i]->solve_eq_sp(block_vec[i]->xp, block_vec[i]->bnewp);
   }
+  int root_sum_n_ffs = 0;
+  int root_sum_n_fbs = 0;
+  int root_sum_n = 0;  
+  int root_block_flag = 0;
 
+  MPI_Reduce(&sum_n_ffs, &root_sum_n_ffs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&sum_n_fbs, &root_sum_n_fbs, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&sum_n, &root_sum_n, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce(&block_flag, &root_block_flag, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if(my_id==0){
+	double avg_n_ffs = 1.0 * root_sum_n_ffs / root_block_flag;
+	double avg_n_fbs = 1.0 * root_sum_n_fbs / root_block_flag;
+	double avg_n = 1.0 * root_sum_n / root_block_flag;
+	clog<<"root_block_flag, avg_n_ffs, fbs, n: "<<root_block_flag<<" "<<avg_n_ffs<<" "<<avg_n_fbs<<" "<<avg_n<<endl;
+  }
       /*if(my_id==0)
 	   cout<<nodelist<<endl;
    for(size_t i=0;i<block_vec.size();i++){
@@ -789,7 +815,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    time += tran.step_t;
    MPI_Barrier(MPI_COMM_WORLD);
 
-  // return 0;
+   // return 0;
    int iter = 0;
    clock_t tr_ts, tr_te;
    //if(my_id==0)
@@ -2883,6 +2909,7 @@ void Circuit::find_super(){
 
 // push the 8 set of internal bd nodes into node_set_x
 void Circuit::push_bd_nodes(Path_Graph &pg, int&my_id){
+	int temp = 0;
 	// name of the internal_nodelist set
 	NodePtrVector internal_set;
 
@@ -3055,8 +3082,8 @@ void Circuit::update_geometry(int my_id, MPI_CLASS &mpi_class){
 	// clog<<"ckt bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
 
 	num_blocks = NUM_BLOCKS_X * NUM_BLOCKS_Y;
-	// if(my_id==0)
-		// clog<<"total num_blocks for one core: "<<num_blocks<<endl;
+	if(my_id==0)
+		clog<<"total num_blocks for one core: "<<num_blocks<<endl;
 	block_vec.clear();
 	for(int i=0; i<num_blocks;i++){
 		Block *temp_block = new Block();
@@ -3285,19 +3312,40 @@ void Circuit::clean_explore(){
 }
 
 void Circuit::push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set){
-	vector<size_t>::iterator it;
 	Node *nd;
-	size_t id;
 	// s direction
 	size_t n_s = internal_set.size();
-	// clog<<"ns size: "<<n_s<<endl;
+	// if(my_id==0)
+	// cout<<"my_id, ns size: "<<my_id<<" "<<n_s<<endl;
 	for(size_t i=0;i<n_s;i++){
 		nd = internal_set[i]->rep;
 		for(int j=0;j<block_vec.size();j++){
 			if(!block_vec[j]->node_in_block(nd))
 				continue;
-			// clog<<"block j push nd: "<<j<<" "<<*nd<<" "<<nd->pt<<endl;
+			// if(my_id==0)
+			// cout<<"block j push nd: "<<j<<" "<<*nd<<" "<<nd->pt<<endl;
 			block_vec[j]->push_nd_pg_x(nd);
+		}
+	}
+}
+
+void Circuit::push_bd_net_nodes(){
+	size_t n_s = bd_netlist.size();
+	Net *net;
+	Node *a = NULL; 
+	Node *b = NULL;
+	for(size_t i=0;i<n_s;i++){
+		net = bd_netlist[i];
+		if(net == NULL) 
+			continue;
+		a = net->ab[0]->rep;
+		b = net->ab[1]->rep;
+		for(int j=0;j<block_vec.size();j++){
+			if(block_vec[j]->node_in_block(a))
+				block_vec[j]->push_nd_pg_x(a);
+
+			if(block_vec[j]->node_in_block(b))
+				block_vec[j]->push_nd_pg_x(b);
 		}
 	}
 }

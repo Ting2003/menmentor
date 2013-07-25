@@ -334,6 +334,8 @@ private:
 	void update_node_set_bx();                               
         void parse_path_table();
 	void push_bd_nodes(Path_Graph &pg, int &my_id);
+
+	void push_bd_net_nodes();
         void build_path_graph(); 
 	void push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set);
         void build_FFS_path();
