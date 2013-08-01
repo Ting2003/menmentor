@@ -19,13 +19,13 @@ using namespace std;
 
 double Circuit::EPSILON = 1e-5;
 size_t Circuit::MAX_BLOCK_NODES =100000;//5500;
-double Circuit::OMEGA = 1.2;
+// double Circuit::OMEGA = 1.2;
 double Circuit::OVERLAP_RATIO = 0;
-int    Circuit::MODE = 0;
+//int    Circuit::MODE = 0;
 const int MAX_ITERATION = 100000000;
 const int SAMPLE_INTERVAL = 5;
 const size_t SAMPLE_NUM_NODE = 10;
-const double MERGE_RATIO = 0.3;
+// const double MERGE_RATIO = 0.3;
 int Circuit::NUM_BLOCKS_X = 1;
 int Circuit::NUM_BLOCKS_Y = 1;
 int Circuit::DEBUG=1;
@@ -76,7 +76,6 @@ void Circuit::pre_release_circuit(){
 		// clog<<"finish deleting i: "<<i<<" th node. "<<endl;
 		}
 	}
-	// clog<<"after release nodelist. "<<endl;
 	// nodelist.clear();
 	// delete nets
 	for(int type=0;type<NUM_NET_TYPE;type++){
@@ -507,10 +506,6 @@ void Circuit::solve(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran)
 bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran){
 	double time=0;
 	double t1, t2;
-	
-	/*cm = &c;
-	cholmod_start(cm);
-	cm->print = 5;*/
 
 	total_blocks = mpi_class.X_BLOCKS *mpi_class.Y_BLOCKS;
 
@@ -532,12 +527,7 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	internal_init(my_id, num_procs);
 	
 	bool successful = false;
-	/*if(my_id==0){
-		for(size_t i=0;i<block_vec.size();i++){
-		clog<<"block: "<<i<<endl;
-		clog<<"DC matrix: "<<block_vec[i]->A<<endl;
-		}
-	}*/
+
 	//get_voltages_from_block_LU_sol();
 	solve_DC(num_procs, my_id, mpi_class);
  #if 0	
@@ -545,14 +535,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	print_rhs();
 	print_solution();
  #endif
-	// cout<<nodelist;
-	// if(my_id==0)
-		// cout<<nodelist<<endl;
-		/*for(size_t i=0;i<block_vec.size();i++){
-			for(size_t j=0;j<block_vec[i]->count;j++)
-				cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
-		}*/
-	// return true;
 	// then sync
 	MPI_Barrier(MPI_COMM_WORLD);
 	// return 0;
@@ -569,14 +551,10 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 		block_vec[i]->stamp_matrix_tr(my_id, mpi_class, tran);	
 		block_vec[i]->make_A_symmetric_tr(my_id, tran);	   
 		block_vec[i]->stamp_current_tr(my_id, time);
-		// if(my_id==0)
-			// clog<<block_vec[i]->A<<endl;
 
    		block_vec[i]->CK_decomp();
-//#if 0   
 		block_vec[i]->clear_A();
 		block_vec[i]->build_id_map();
-//#endif
 		// bnewp = bp
 		block_vec[i]->copy_vec(block_vec[i]->bnewp,
 				block_vec[i]->bp);
@@ -586,8 +564,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    set_eq_induc(tran);
    set_eq_capac(tran);
    
-   // if(my_id==0)
-	//   clog<<"before modify_rhs_tr_0. "<<endl;
    // already push back cap and induc into set_x and b
    for(size_t i=0;i<block_vec.size();i++){
    	block_vec[i]->modify_rhs_tr_0(block_vec[i]->bnewp, block_vec[i]->xp, my_id);
@@ -614,8 +590,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	sum_n += block_vec[i]->count;
 	block_flag = 1;
 	block_vec[i]->find_super();
-	// block_vec[i]->test_path_super();
-	// block_vec[i]->solve_eq_sp(block_vec[i]->xp, block_vec[i]->bnewp);
   }
   int root_sum_n_ffs = 0;
   int root_sum_n_fbs = 0;
@@ -633,26 +607,8 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
 	double avg_n = 1.0 * root_sum_n / root_block_flag;
 	clog<<"root_block_flag, avg_n_ffs, fbs, n: "<<root_block_flag<<" "<<avg_n_ffs<<" "<<avg_n_fbs<<" "<<avg_n<<endl;
   }
-      /*if(my_id==0)
-	   cout<<nodelist<<endl;
-   for(size_t i=0;i<block_vec.size();i++){
-	   for(size_t j=0;j<block_vec[i]->count;j++)
-		   cout<<"b: "<<*block_vec[i]->replist[j]<<endl;
-   }*/
-  
-   solve_tr_step(num_procs, my_id, mpi_class);
-#if 0
-   if(my_id==0){
-	cout<<endl<<" first time step sol: "<<endl;
-	for(size_t i=0;i<replist.size();i++){
-		cout<<"i, nd: "<<i<<" "<<replist[i]->name<<" "<<replist[i]->pt<<" "<<replist[i]->value<<endl;
-	}
-	// cout<<nodelist<<endl;
-   }
-#endif
-   //save_tr_nodes(tran, xp);
-   // for(size_t i=0;i<block_vec.size();i++)
-	save_ckt_nodes(tran);//, block_vec[i]->xp);
+  solve_tr_step(num_procs, my_id, mpi_class);
+   save_ckt_nodes(tran);//, block_vec[i]->xp);
 
    time += tran.step_t;
    MPI_Barrier(MPI_COMM_WORLD);
@@ -660,9 +616,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    // return 0;
    int iter = 0;
    clock_t tr_ts, tr_te;
-   //if(my_id==0)
-	  // clog<<"after first time step. "<<endl;
-   //for(; time <= tran.tot_t; time += tran.step_t){
    while(time <= tran.tot_t){// && iter < 1){
 	if(iter ==0)
 		tr_ts = clock();
@@ -675,29 +628,12 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
       		block_vec[i]->modify_rhs_tr(block_vec[i]->bnewp, block_vec[i]->xp);
 	}
 
-      // if(my_id==0)
-	  //    clog<<" ===== step: ===== "<<my_id<<" "<<time<<endl;
-      // need to add bcast function for processors
-      // need to be modified into block version
-      //solve_eq_sp(block_info.xp, block_info.bnewp);
-      // solution stored in block_info.xp
-      //if(replist.size()>0)
       solve_tr_step(num_procs, my_id, mpi_class);
 
-      // if(my_id==0)
-	  // cout<<endl<<" "<<nodelist<<endl;
-      //save_tr_nodes(tran, xp);
-
-      // for(size_t i=0;i<block_vec.size();i++)
-      	save_ckt_nodes(tran);//, block_vec[i]->xp);
+      save_ckt_nodes(tran);//, block_vec[i]->xp);
       time += tran.step_t;
       // sync in the end of each time step
       MPI_Barrier(MPI_COMM_WORLD);
-      /*if(iter ==0){
-		tr_te = clock();
-		clog<<"time to solve one step is: "<<1.0*(tr_te - tr_ts)/CLOCKS_PER_SEC<<endl;
-	}*/
-      //clog<<"after time-t step barrier. "<<my_id<<" "<<time<<endl;
       iter ++;
    }
 
@@ -882,62 +818,23 @@ void Circuit:: release_ckt_nodes(Tran &tran){
 
 void Circuit::get_parameters(
 		double & epsilon,
-		double & omega,
 		double & overlap_ratio,
-		size_t & max_block_nodes,
-		int & mode){
+		size_t & max_block_nodes
+		){
 	epsilon		= EPSILON;
-	omega		= OMEGA;
 	overlap_ratio	= OVERLAP_RATIO; 
 	max_block_nodes	= MAX_BLOCK_NODES;
-	mode		= MODE;
 }
 
 // default values of these parameters are at the begining of this file
 void Circuit::set_parameters(
 		double epsilon, 
-		double omega, 
 		double overlap_ratio,
-		size_t max_block_nodes,
-		int mode){
+		size_t max_block_nodes
+		){
 	EPSILON		= epsilon;
-	OMEGA		= omega;
 	OVERLAP_RATIO 	= overlap_ratio;
 	MAX_BLOCK_NODES	= max_block_nodes;
-	MODE		= mode;
-}
-
-// choose an appropriate omega for the circuit s.t.
-// - node size (use replist)
-// - type (c4 or wb)
-// - number of layers
-void Circuit::select_omega(){
-	double omega=OMEGA;
-	size_t num_nodes = replist.size();
-	//size_t num_layers = layers.size();
-	if( num_nodes < 0.05e6 )
-		omega=1.0;
-	else if (num_nodes < 0.2e6 )
-		omega = 1.1;
-	else if (num_nodes < 0.3e6 )
-		omega = 1.2;
-	else if (num_nodes < 0.5e6 )
-		omega = 1.3;
-	else if (num_nodes < 1.2e6 )
-		omega = 1.4;
-	else
-		omega = 1.5;
-
-	//if( circuit_type == WB && num_layers >= 8 ) omega += 0.2;
-
-	if( circuit_type == C4 ) omega += 0.1;
-
-	if( name == "GND" && num_nodes < 1.2e6) omega -= 0.1;
-
-	if( omega >= 1.6 ) omega = 1.6;
-	if( omega <= 1.0 ) omega = 1.0;
-
-	OMEGA = omega;
 }
 
 // Randomly choose a number of sample nodes to monitor

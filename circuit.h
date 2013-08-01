@@ -81,8 +81,8 @@ public:
 	void block_solve_Jacobi(int my_id);
 	double find_diff(int my_id);
 	
-	static void set_parameters(double, double, double, size_t, int);
-	static void get_parameters(double&, double&, double&, size_t&, int&);
+	static void set_parameters(double, double, size_t);
+	static void get_parameters(double&, double&, size_t&);
 
 	friend ostream & operator << (ostream & os, const Circuit & ckt);
 	friend class Parser;
@@ -231,12 +231,6 @@ private:
 	// solve circuit with preconditioned pcg method
 
 	// ****** function for transient *******
-	double *temp;	
-        
-	void stamp_current_tr_1(double *bp, double *b, double &time);
-	void stamp_current_tr_net_1(double *bp, double * b, Net * net, double &time);
-
-	void stamp_current_tr_net(Net * net, double &time, int &my_id);
 	void release_ckt_nodes(Tran &tran);
 	void print_ckt_nodes(Tran &tran);
 	void save_ckt_nodes_to_tr(Tran &tran);
@@ -247,31 +241,17 @@ private:
 
 	void print_tr_nodes(Tran &tran);
 
-	Vec compute_precondition(const Matrix & ML, const Matrix & D, 
-			const Matrix & MU, Vec &r);
-	void init_precondition(const Matrix &A, Matrix &ML, Matrix &D,
-			Matrix &MU);
-	// searching all the blocks for global residue
-	Vec get_block_res(const Vec& b, const Vec& xk1);
-	// searching all the blocks for global zk1
-	Vec compute_block_precondition( Vec &r);
-
 	void set_len_per_block();
 	void find_block_size (MPI_CLASS &mpi_class);
 
 	double modify_voltage(int &my_id, Block &block_info, double* x_old);
-
-	void solve_one_block(size_t block_id);
-
-	void select_omega();
 
 	void set_type(CIRCUIT_TYPE type){circuit_type = type;};
 	// ************* functions and members for thread **********
 	// set s_col_FFS and FBS
 	// ********* sparse vectors ******
 	Path_Graph pg;
-	void update_node_set_bx();                               
-	void push_bd_nodes(Path_Graph &pg, int &my_id);
+	void update_node_set_bx();           	     void push_bd_nodes(Path_Graph &pg, int &my_id);
 
 	void push_bd_net_nodes();
 	void push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set);
@@ -313,10 +293,10 @@ private:
 
 	// control variables
 	static double EPSILON;
-	static double OMEGA;
+	// static double OMEGA;
 	static double OVERLAP_RATIO;
 	static size_t MAX_BLOCK_NODES;
-	static int MODE; // 0 = IT, 1 = LU
+	// static int MODE; // 0 = IT, 1 = LU
 	static int NUM_BLOCKS_X;
 	static int NUM_BLOCKS_Y;
 	static int DEBUG;
@@ -401,34 +381,6 @@ inline Node * Circuit::get_node(string name){
 	if( it != map_node.end() ) return it->second;
 	else return NULL;
 }
-/*
-inline void Circuit::merge_node(Node * node){
-	for(DIRECTION dir = WEST; dir <= NORTH; dir=DIRECTION(dir+1)){
-		// test whether this line has been processed
-		if( node->end[dir] != node ) continue;
-
-		// probe for one step, if the line is only one step, don't do it.
-		Node * next = node->get_nbr_node(dir);
-		
-		if( next == NULL || !next->is_mergeable() ){
-			continue;
-		}
-		merge_along_dir(node, dir);
-	}
-}*/
-
-/*
-// find a net by name
-inline bool Circuit::has_net(string name) const{
-	if( map_net.find(name) != map_net.end() ) return true;
-	return false;
-}
-
-
-// get a net by name
-inline Net * Circuit::get_net(string name){return map_net[name];}
-*/
-
 // bool compare_node_ptr(const Node *a, const Node *b);
 ostream & operator << (ostream & os, const NodePtrVector & nodelist);
 ostream & operator << (ostream & os, const NetList & nets);

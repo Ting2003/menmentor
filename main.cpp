@@ -6,11 +6,8 @@
 
 const char * usage="Usage: %s [-eorbILifl] benchmark\n\
     -e EPSILON\n\
-    -o OMEGA\n\
     -r mpi overlap ratio\n\
     -b max block nodes\n\
-    -I block iterative (default)\n\
-    -L direct LU\n\
     -i input file\n\
     -f output file\n\
     -l log file (default to screen)\n\
@@ -25,7 +22,6 @@ int main(int argc, char * argv[]){
 	int my_id;
 	int num_procs;
 	int c;
-	int mode=0;
 	int x_blocks = 0;
 	int y_blocks = 0;
 	float mpi_olap_ratio;
@@ -36,29 +32,20 @@ int main(int argc, char * argv[]){
 	char * input=NULL, * output=NULL;
 	bool partition_flag = false;
 	bool input_flag = false, output_flag = false;
-	Circuit::get_parameters(epsilon, omega, overlap_ratio, 
-			max_block_nodes, mode);
+	Circuit::get_parameters(epsilon, overlap_ratio, 
+			max_block_nodes);
 	MPI_CLASS::get_parameters(x_blocks, y_blocks, mpi_olap_ratio);
 
-	while( ( c = getopt(argc, argv, "i:a:f:e:o:r:b:l:x:y:LI")) != -1 ){
+	while( ( c = getopt(argc, argv, "i:a:f:e:r:b:l:x:y")) != -1 ){
 		switch(c){
 		case 'e':
 			epsilon = atof(optarg);
-			break;
-		case 'o':
-			omega = atof(optarg);
 			break;
 		case 'r':
 			mpi_olap_ratio = atof(optarg);
 			break;
 		case 'b':
 			max_block_nodes = atof(optarg);
-			break;
-		case 'L':
-			mode = 1;
-			break;
-		case 'I':
-			mode = 0;
 			break;
 		case 'a':
 			partition_flag = atoi(optarg);
@@ -104,8 +91,8 @@ int main(int argc, char * argv[]){
 	if( freopen(ss.str().c_str(), "w", stdout) == NULL )
 		report_exit("Ouptut file error\n");
 #endif
-	Circuit::set_parameters(epsilon, omega, overlap_ratio, 
-			max_block_nodes, mode);
+	Circuit::set_parameters(epsilon,overlap_ratio, 
+			max_block_nodes);
 	MPI_CLASS::set_parameters(x_blocks, y_blocks, mpi_olap_ratio);
 	if(my_id==0)
 	clog<<"mpi.x_blocks, y_blocks, overlap_ratio: "<<MPI_CLASS::X_BLOCKS<<" "<<MPI_CLASS::Y_BLOCKS<<" "<<MPI_CLASS::overlap_ratio<<endl;
