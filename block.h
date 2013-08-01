@@ -1,10 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : block.h
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// declaration of block class
-// ----------------------------------------------------------------//
-
 #ifndef __BLOCK_H__
 #define __BLOCK_H__
 #include <fstream>

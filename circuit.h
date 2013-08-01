@@ -1,17 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : circuit.h
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// declaration of Circuit class
-// used to construct the circuit network
-// ----------------------------------------------------------------//
-// - Ting Yu - Tue Feb 8 5:45 pm 2011
-//   * added the ostream<< func in .h file
-// - Zigang Xiao - Tue Jan 18 21:46:13 CST 2011
-//   * added solve() and related function
-// - Zigang Xiao - Sun Jan 16 16:04:03 CST 2011
-//   * added this log
-
 #ifndef __CIRCUIT_H__
 #define __CIRCUIT_H__
 
@@ -259,7 +245,6 @@ private:
 
 	//  ******* method for PCG method  ********
 	// solve circuit with preconditioned pcg method
-	void copy_node_voltages_block();
 
 	// ****** function for transient *******
 	double *temp;	
@@ -288,10 +273,6 @@ private:
 	void save_ckt_nodes(Tran &tran);//, double *x);
 
 	void print_tr_nodes(Tran &tran);
-
-	void get_voltages_from_LU_sol(double* x);
-	void get_voltages_from_block_LU_sol();
-	void get_vol_mergelist();
 
 	Vec compute_precondition(const Matrix & ML, const Matrix & D, 
 			const Matrix & MU, Vec &r);

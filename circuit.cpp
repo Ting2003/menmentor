@@ -1,19 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : circuit.cpp
-// Author : Zigang Xiao <zxiao2@illinois.edu>
-//          Ting Yu <tingyu1@illinois.edu>
-//
-// implementation file of circuit.h
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Sun Jan 30 18:35:56 CST 2011
-//   * Add UMFPACK support
-// - Zigang Xiao - Tue Jan 25 17:19:21 CST 2011
-//   * added framework of PCG
-// - Zigang Xiao - Tue Jan 18 21:46:13 CST 2011
-//   * added solve() and related function
-// - Zigang Xiao - Sun Jan 16 16:04:03 CST 2011
-//   * added this log
-
 #include <fstream>
 #include <string>
 #include <algorithm>
@@ -184,33 +168,6 @@ void Circuit::check_sys() const{
 	clog<<"* Max nodelist = "<<(size_t)nodelist.max_size()<<endl;
 	clog<<"****            END              ****"<<endl<<endl;
 }
-
-// functor to be used in STL sort function
-// order: y > x > z > flag 
-// input: two node a, b
-// return true if a < b, false o/w
-// note that ground note are put to last
-#if DEBUG
-bool compare_node_ptr(const Node * a, const Node * b){
-	if( a->is_ground() ) return false;
-	if (b->is_ground() ) return true;
-
-	if( a->pt_vec[0].y == b->pt_vec[0].y ){
-		if( a->pt_vec[0].x == b->pt_vec[0].x ){
-			if( a->pt_vec[0].z == b->pt_vec[0].z ){
-				return (a->isS() > b->isS());
-			}
-			else{
-				return (a->pt_vec[0].z > b->pt_vec[0].z);// top down
-			}
-		}
-		else
-			return ( a->pt_vec[0].x < b->pt_vec[0].x );
-	}
-	else
-		return (a->pt_vec[0].y < b->pt_vec[0].y);
-}
-#endif
 // sort the nodes according to their coordinate 
 // sort nodelist
 void Circuit::sort_nodes(){
@@ -1030,106 +987,8 @@ double Circuit::solve_iteration(int &my_id, int &iter,
 	// if(my_id==0) clog<<"iter, diff: "<<iter<<" "<<diff_root<<endl;
 	return diff_root;
 }
-#if DEBUG
-double Circuit::modify_voltage(int &my_id, Block &block, double * x_old){
-	double max_diff = 0.0;
-	//if(get_name()=="VDDA") OMEGA = 1.0;
-	//else OMEGA = 1.15;
-	OMEGA = 1.0;
-	for(size_t i=0;i<block.count;i++){
-		block.xp[i] = (1-OMEGA)*x_old[i] + OMEGA*
-			block.xp[i];
-		// update block nodes value
-		block.nodes[i]->rep->value = block.xp[i];
-		double diff = fabs(x_old[i] - block.xp[i]);
-		if( diff > max_diff ) max_diff = diff;
-	}
 
-	return max_diff;
-}
-#endif
-// given vector x that obtained from LU, set the value to the corresponding
-// node in nodelist
-void Circuit::get_voltages_from_LU_sol(double * x){
-#if DEBUG
-	for(size_t i=0;i<nodelist.size()-1;i++){
-		Node * node = nodelist[i];
-		size_t id = node->rep->rid;	// get rep's id in Vec
-		double v = x[id];		// get its rep's value
-		node->value = v;
-	}
-#endif
-}
-#if 0
-// compute value of mergelist nodes
-void Circuit::get_vol_mergelist(){
-	DIRECTION p, q;
-	for(size_t i=0;i<mergelist.size();i++){
-		Node * node = mergelist[i];
-		// check direction
-		if( node->nbr[WEST] != NULL ){
-			p = WEST;
-			q = EAST;
-		}
-		else{
-			p = SOUTH;
-			q = NORTH;
-		}
-		// assign vol value to node
-		// left end node and its value
-		double r1 = node->eqvr[p];
-		double v1 = node->end[p]->value;
-		//clog<<" left node: "<<r1<<" / "<<v1<<endl;
-		//clog<<" left end "<<node->end[p]->name<<endl;
-		// right end node and its value
-		double r2 = node->eqvr[q];
-		double v2 = node->end[q]->value;
-		//clog<<"right node: "<<r2<<" / "<<v2<<endl;
-		//clog<<"right end "<<node->end[q]->name<<endl;
-		// value for node
-		if(v1 > v2){
-			node->value = v2 + (v1 - v2) * r2 / (r1 + r2);
-		}
-		else{
-			node->value = v1 + (v2 - v1)  * r1 / (r1 + r2);
-		}
-		//clog<<" node "<<*node<<endl;
-	}
-}
-#endif
 
-// copy solution of block into circuit
-void Circuit::get_voltages_from_block_LU_sol(){
-#if DEBUG
-	for(size_t i=0;i<block_vec.size();i++)
-		copy_voltages_rep();
-	/*for(size_t i=0;i<nodelist.size()-1;i++){
-		Node * node = nodelist[i];
-		//if( node->is_mergeable() ) continue;
-		size_t id = node->rep->rid;
-		double v = block_info.xp[id];
-		node->value = v;
-		// node->rep->value = v;
-	}*/
-#endif
-}
-
-#if DEBUG
-// 1. copy node voltages from the circuit to a Vec
-//    from = true then copy circuit to x
-//    else copy from x to circuit
-// 2. map block voltage into global_index
-void Circuit::copy_node_voltages_block(){
-	size_t id;
-	// copy node voltages from nodelist
-	for(size_t i=0;i<replist.size();i++){
-		Node *node = replist[i];
-		id = node->rid;
-		block_info.xp[id] = replist[i]->value;
-		block_info.nodes[id] = replist[i];
-	}
-}
-#endif
 void Circuit:: release_ckt_nodes(Tran &tran){
    for(size_t j=0;j<ckt_nodes.size();j++){
          ckt_nodes[j].node = NULL;
