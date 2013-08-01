@@ -93,7 +93,6 @@ public:
 	void print_matrix(Matrix A);
 	void print_rhs();
 	void print_solution();
-	// cholmod_common c, *cm;
 
 	// mpi related variables
 	// member
@@ -102,7 +101,6 @@ public:
 	double *bd_x_g;
 	double *internal_x_g;	
 	// ****** other processor *******
-	// Matrix A;
 
 	// solution array for each processor
 	double *bd_x;	
@@ -169,7 +167,6 @@ private:
 	// member functions
 
 	bool solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran);
-	void solve_block_LU();
 	void decomp_matrix(int &my_id, Matrix &A);
 	
 	// initialize things before solve_iteration
@@ -192,11 +189,6 @@ private:
 
 	void set_eq_induc(Tran &tran);
 	void set_eq_capac(Tran &tran);
-	// void modify_rhs_c_tr_0(Net *net, double *rhs, double *xp, int &my_id);
-	// void modify_rhs_l_tr_0(Net *net, double *rhs, double *xp, int &my_id);
-
-	// void modify_rhs_c_tr(Net *net, double *rhs, double *xp);
-	// void modify_rhs_l_tr(Net *net, double *rhs, double *xp);
 	void release_tr_nodes(Tran &tran);
 
 	double solve_iteration_tr(int &my_id, int &iter,
@@ -235,24 +227,12 @@ private:
 
 	void reorder_bd_x_g(MPI_CLASS &mpi_class);
 
-	void update_block_rhs(Block & block, int dir);
-
 	//  ******* method for PCG method  ********
 	// solve circuit with preconditioned pcg method
 
 	// ****** function for transient *******
 	double *temp;	
-        //cholmod_factor *L;
-	/*double *Lx;
-	int *Li, *Lp, *Lnz;*/
-
-	void make_A_symmetric_tr(int &my_id, Tran &tran);
-
-	void stamp_inductance_tr(Matrix & A, Net * net, Tran &tran, int &my_id);
-	void stamp_block_VDD_tr(int &my_id, Net * net, Matrix &A);
-	void stamp_block_resistor_tr(int &my_id, Net * net, Matrix &A);
-	void stamp_capacitance_tr(Matrix &A, Net *net, Tran &tran, int &my_id);
-
+        
 	void stamp_current_tr_1(double *bp, double *b, double &time);
 	void stamp_current_tr_net_1(double *bp, double * b, Net * net, double &time);
 
@@ -287,42 +267,18 @@ private:
 
 	void set_type(CIRCUIT_TYPE type){circuit_type = type;};
 	// ************* functions and members for thread **********
- 
-        /*cholmod_dense *b, *x, *bnew;
-        double *bp, *xp;
-        double *bnewp;*/
-
-	void solve_eq(double *X);
-	void solve_eq_sp(double*X, double *bnewp);
 	// set s_col_FFS and FBS
-	void solve_eq_set();
-	int* s_col_FFS;
-	int* s_col_FBS;
 	// ********* sparse vectors ******
 	Path_Graph pg;
-	int *path_b, *path_x;
-        int *id_map;
-	int len_path_b, len_path_x;
-	int flag_ck;
-	void find_super();
 	void update_node_set_bx();                               
-        void parse_path_table();
 	void push_bd_nodes(Path_Graph &pg, int &my_id);
 
 	void push_bd_net_nodes();
 	void push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set);
-        void set_up_path_table();               
-        void find_path(vector<size_t>&node_set, List_G &path);
-
 
 	void get_samples();
-
 	bool check_diverge() const;
-
-	/*void merge_along_dir(Node *, DIRECTION dir);
-	Node * merge_along_dir_one_pass(Node *, DIRECTION dir, bool remove);*/
-	//void merge_node(Node * node);
-
+	
 	vector<Node_TR_PRINT> ckt_nodes;
 	// ************** member variables *******************
 	NodePtrVector nodelist;		// a set of nodes
@@ -339,9 +295,6 @@ private:
 	NetPtrVector bd_netlist;	
 	NetList net_set[NUM_NET_TYPE];// should be the same as size of NET_TYPE
 	// defines the net direction in layers
-	// static vector<LAYER_DIR> layer_dir;
-	// vector<int> layers;
-	
 	// mapping from name to Node object pointer
 	//unordered_
 	map<string, Node*> map_node;
