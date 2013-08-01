@@ -103,8 +103,6 @@ public:
 	int* s_col_FFS;
 	int* s_col_FBS;
 
-	// double *temp;
-        // int *id_map;
         int len_path_b, len_path_x;
         int flag_ck;
 
@@ -130,7 +128,6 @@ public:
 	// equal to matrix size and b size
 	size_t count;
 
-	// Node ** nodes;
 	NodePtrVector replist;
 	map<Node *, size_t> nd_IdMap;
 	Node *nd_GND;
