@@ -187,14 +187,8 @@ private:
 
 	// methods of stamping the matrix
 	
-	void make_A_symmetric(double *bp, int &my_id);
 	void check_matrix(Matrix &A);
 	void current_tr(Net *net, double &time);
-
-	void stamp_block_matrix(int &my_id, Matrix &A, MPI_CLASS &mpi_class);
-	void stamp_block_matrix_tr(int &my_id, Matrix &A, MPI_CLASS &mpi_class, Tran &tran);
-	// void modify_rhs_tr_0(double *b, double *xp, int &my_id);
-	// void modify_rhs_tr(double *b, double *xp);
 
 	void set_eq_induc(Tran &tran);
 	void set_eq_capac(Tran &tran);
@@ -259,7 +253,6 @@ private:
 	void stamp_block_resistor_tr(int &my_id, Net * net, Matrix &A);
 	void stamp_capacitance_tr(Matrix &A, Net *net, Tran &tran, int &my_id);
 
-	void stamp_current_tr(int &my_id, double &time);
 	void stamp_current_tr_1(double *bp, double *b, double &time);
 	void stamp_current_tr_net_1(double *bp, double * b, Net * net, double &time);
 
@@ -317,10 +310,7 @@ private:
 	void push_bd_nodes(Path_Graph &pg, int &my_id);
 
 	void push_bd_net_nodes();
-        void build_path_graph(); 
 	void push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set);
-        void build_FFS_path();
-        void build_FBS_path();                  
         void set_up_path_table();               
         void find_path(vector<size_t>&node_set, List_G &path);
 
