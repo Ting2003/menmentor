@@ -57,29 +57,6 @@ Node & Node::operator = (const Node & nd){
 	(*this) = Node(nd);
 	return *this;
 }
-#if 0
-// Ting
-// get node's nbr from dir direction
-// template<class T>
-Node * Node::get_nbr_node(Node *node, DIRECTION dir) const{
-	Node * node_nbr =node->nbr[dir]->ab[0];
-	if(node_nbr->name == node->name){
-		node_nbr = node->nbr[dir]->ab[1];
-	}
-	return node_nbr;	
-}
-
-// Ting
-// get nodes' nbr from dir direction
-// template<class T>
-Node Node::get_nbr_node(Node node, DIRECTION dir) const{
-	Node node_nbr = *node.nbr[dir]->ab[0];
-	if(node_nbr.name == node.name){
-		node_nbr = *node.nbr[dir]->ab[1];
-	}
-	return node_nbr;
-}
-#endif
 
 ostream & operator << (ostream & os, const Node & node){
 	//os<<node.name<<node.pt<<"="<<scientific<<node.value;

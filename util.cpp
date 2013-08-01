@@ -1,10 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : util.cpp
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// Source code for some utility functions
-// ----------------------------------------------------------------//
-
 #include <iostream>
 #include <iomanip>
 #include <stdlib.h>

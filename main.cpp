@@ -15,7 +15,8 @@ const char * usage="Usage: %s [-eorbILifl] benchmark\n\
     -f output file\n\
     -l log file (default to screen)\n\
     -x mpi x block number\n\
-    -y mpi y block number\n"
+    -y mpi y block number\n\
+    -a explore partition(1) or solving(0)"
 ;
 
 const char * usage2="Usage: %s -i input -a partition_flag -x X_BLOCK -y Y_BLOCK -f output\n";
@@ -23,10 +24,6 @@ const char * usage2="Usage: %s -i input -a partition_flag -x X_BLOCK -y Y_BLOCK 
 int main(int argc, char * argv[]){
 	int my_id;
 	int num_procs;
-
-	//double mpi_t1, mpi_t2;
-	//mpi_t1 = MPI_Wtime();
-	
 	int c;
 	int mode=0;
 	int x_blocks = 0;
@@ -37,7 +34,7 @@ int main(int argc, char * argv[]){
 	//char * logfile="/dev/null";
 	char * logfile=NULL;
 	char * input=NULL, * output=NULL;
-	bool partition_flag;
+	bool partition_flag = false;
 	bool input_flag = false, output_flag = false;
 	Circuit::get_parameters(epsilon, omega, overlap_ratio, 
 			max_block_nodes, mode);
@@ -101,16 +98,9 @@ int main(int argc, char * argv[]){
 	if(my_id==0) clog<<"num_procs: "<<num_procs<<endl;	
 
 	open_logfile(logfile);
-#if 0
-	// FILE *oof;
+#if ENABLE_OUTPUT
 	stringstream ss;
 	ss<<output<<"_"<<my_id;
-	// oof = fopen(ss.str().c_str(), "w");
-	// if(!oof)
-		// report_exit("output file error\n");
-	// fclose(oof);
-
-	
 	if( freopen(ss.str().c_str(), "w", stdout) == NULL )
 		report_exit("Ouptut file error\n");
 #endif
@@ -151,11 +141,9 @@ int main(int argc, char * argv[]){
 		return 0;	
 	double mpi_t11, mpi_t12;
 	mpi_t11 = MPI_Wtime();
-//#if 0	
+	
 	for(size_t i=0;i<cktlist.size();i++){
 		Circuit * ckt = cktlist[i];
-		// if(ckt->get_name() != "VDD")
-			// continue;
 		if(my_id==0){
 			clog<<"<======== solving: "<<ckt->get_name()<<" =========>"<<my_id<<endl;
 		}
@@ -163,30 +151,21 @@ int main(int argc, char * argv[]){
 				tran);	
 		free(ckt);
 	
-		// clog<<"before barrier: "<<my_id<<endl;
 		MPI_Barrier(MPI_COMM_WORLD);
-		// clog<<"after barrier: "<<my_id<<endl;
 	}
-	// if(my_id==0)
-	 	//tran.print_tr_nodes();
+#if ENABLE_OUTPUT
+	if(my_id==0)
+	 	tran.print_tr_nodes();
+#endif
 
 	mpi_t12 = MPI_Wtime();
 	
 	// output a single ground node
 	if(my_id==0){
-		//printf("G  %.5e\n", 0.0);
 		clog<<"solve using: "<<1.0*(mpi_t12-mpi_t11)<<endl;
-		//close_logfile();
-		//clog<<"after close file/ "<<endl;
 	}
-// #endif
 	// close_logfile();
 	MPI_Barrier(MPI_COMM_WORLD);
-	// MPI_Abort(MPI_COMM_WORLD, 911);
 	int err = MPI_Finalize();
-	//clog<<"error: "<<my_id<<" "<<err<<endl;
-	//if(my_id==0)
-		//clog<<"after finalize. "<<my_id<<endl;
-	//clog<<"close logfile. "<<my_id<<endl;
 	return 0;
 }

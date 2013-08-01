@@ -408,10 +408,10 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// temporary comment second parse	
-	// if(my_id==0) clog<<"before second parse. "<<endl;
+	if(my_id==0) clog<<"before second parse. "<<endl;
 	second_parse(my_id, mpi_class, tran, num_procs);
 
-	// if(my_id==0) clog<<"after second parse."<<endl;
+	if(my_id==0) clog<<"after second parse."<<endl;
 }
 
 void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){

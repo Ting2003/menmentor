@@ -26,6 +26,5 @@ const int OUTPUT_WIDTH_STRING = 10;
 typedef pair<size_t,size_t> SizeTPair;
 class Triplet;
 typedef Triplet Matrix;
-
-//typedef vector<Net *> NetPtrVector;
+#define ENABLE_OUTPUT 0
 #endif
