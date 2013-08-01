@@ -1,12 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : parser.cpp
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// implementation file of parser.h
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Sun Jan 16 16:04:03 CST 2011
-//   * added this log
-
 #include <sstream>
 #include <iostream>
 #include <string>
@@ -23,10 +14,7 @@ using namespace std;
 Parser::Parser(vector<Circuit*> * ckts):p_ckts(ckts){
 }
 
-Parser::~Parser(){ 
-	// x_list.clear();
-	// y_list.clear();
-}
+Parser::~Parser(){}
 
 // node234_2_3_4 
 // name_z_x_y
@@ -93,24 +81,18 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	bool pulse_flag = false;
 	// find grid boundary x and y
 	sscanf(line, "%s %s %s", sname,sa,sb);
-	// if(my_id==1)
-		// clog<<"block 1 line, sa, sb: "<<line<<" "<<sa<<" "<<sb<<endl;
 	if(sa[0] == '0' || sb[0] == '0'){
-		// clog<<"line: "<<line<<endl;
 // #if 0
 	  if(sname[0] == 'I' || sname[0] == 'i'){
 		strcpy(line_s, line);
-		// clog<<"current line: "<<line<<endl;
 		chs = strtok_r(line_s, sep, &saveptr);
 		strcpy(sname, chs);
-		// clog<<"chs, sname: "<<chs<<" "<<sname<<endl;
 		chs = strtok_r(NULL, sep, &saveptr);
 		strcpy(sa, chs);
 		chs = strtok_r(NULL, sep, &saveptr);
 		strcpy(sb, chs);
 		chs = strtok_r(NULL, sep, &saveptr);
 		value = atof(chs);	
-		// clog<<"sname, sa, sb, value: "<<sname<<" "<<sa<<" "<<sb<<" "<<value<<endl;
 		// now skip the pulse current if any exists
 		while(chs !=NULL){
 			chs = strtok_r(NULL, sep, &saveptr);
@@ -123,33 +105,25 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			if(chs[0] == '*'){
 				chs = strtok_r(NULL, sep, &saveptr);
 				if(chs == NULL) break;
-				// clog<<"coord: chs: "<<chs<<endl;
 				strcpy(coord1, chs);
 				strcpy(coord2, coord1);
 				break;
 			}
 		}
-		// clog<<"finish one line. "<<endl;
 	   }else{
 		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
 		// copy string
 		strcpy(coord2, coord1);
-		// clog<<"coord1, coord2: "<<coord1<<" "<<coord2<<endl;
-		// coord2 = coord1;
 	  }
-// #endif
 	}
 	else{
-		// clog<<"regular line: "<<line<<endl; 
 		sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, star, coord1, coord2);
 	}
-// #if 0
 	// net type
 	chs_1 = strtok_r(sname, sep_1, &saveptr_1);
 	// ckt name
 	chs_1 = strtok_r(NULL, sep_1, &saveptr_1);
 	string ckt_name(chs_1);
-	// ckt_name.append(chs_1);
 	
 	extract_node(sa, nd[0], coord1);
 	extract_node(sb, nd[1], coord2);
@@ -163,7 +137,6 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	}
 	Circuit * ckt = (*p_ckts)[ckt_id];
 
-	// clog<<"ckt, line: "<<ckt->name<<" "<<line<<" "<<endl;	
 	for(int i=0;i<2;i++){
 		if ( nd[i].is_ground() ){
 			nd_ptr[i] = ckt->nodelist[0]; // ground node
@@ -177,8 +150,6 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			count = cpr_nd_block(nd_ptr[i], mpi_class.block_geo, my_id);
 			if (count==1) // internal node
 				ckt->add_node(nd_ptr[i]);
-				// if(my_id==0)
-					// clog<<"circuit add node: "<<*nd_ptr[i]<<endl;
 			else{
 				nd_ptr[i]->flag_bd = 1;
 			}
@@ -230,19 +201,15 @@ void Parser::insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	Net * net = new Net(net_type, value, nd_ptr[0], nd_ptr[1]);
 
 	if(net_type == CURRENT && pulse_flag == true){
-		// clog<<"to current net. "<<line<<endl;
-		// clog<<"pulse_flag: "<<pulse_flag<<endl;
 		net->tr = new double [7];
 		// assign pulse paramter for pulse input
 		chs = strtok_r(line, sep, &saveptr);
 		for(int i=0;i<3;i++)
 			chs = strtok_r(NULL, sep, &saveptr);
 		if(chs != NULL){
-			// clog<<"chs: "<<chs<<endl;
 			chs = strtok_r(NULL, sep, &saveptr);
 			}
 		if(chs != NULL){
-			// clog<<"chs again: "<<chs<<endl;
 			chs = strtok_r(NULL, sep, &saveptr);
 			// V1
 			net->tr[0] = atof(chs);
@@ -303,22 +270,17 @@ void Parser::update_node(Net * net){
 		}
 	}
 
-	// clog<<"parsing net: "<<*net<<endl;
 	if(a->is_ground()){
 		b->nbr_vec.push_back(net);
-		// clog<<"b add net: "<<*b<<endl;
 	}
 	else if(b->is_ground()){
 		a->nbr_vec.push_back(net);
-		// clog<<"a add net. "<<*a<<endl;
 	}
 	else {
 		a->nbr_vec.push_back(net);
 		b->nbr_vec.push_back(net);
-		// clog<<"both a and b add net: "<<*a<<" "<<*b<<endl;
 	}
 	return;
-	//cout<<"setting "<<net->name<<" nd1="<<nd1->name<<" nd2="<<nd2->name<<endl;	
 }
 
 // parse the file and create circuits
@@ -361,15 +323,12 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 			&MPI_Vector);
 	int error = MPI_Type_commit(&MPI_Vector);
 
-	// if(my_id==0) clog<<"create new type: "<<error<<endl;
-
 	this->filename = filename;
 
 	// processor 0 will extract layer info
 	// and bcast it into other processor
 	vector<CKT_NAME >ckt_name_vec;
 	
-	// clog<<"before extract ckt name: "<<endl;
 	if(my_id==0){
 		extract_ckt_name(my_id, ckt_name_vec, mpi_class, tran);
 	}
@@ -381,19 +340,12 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 			MPI_COMM_WORLD);
 	if(my_id!=0) ckt_name_vec.resize(ckt_name_size);
 
-	// if(my_id==0) clog<<"before bcast mpi_vector"<<endl;
 	MPI_Bcast(&ckt_name_vec[0], ckt_name_size, 
 			MPI_Vector, 0, MPI_COMM_WORLD);
 
-	// if(my_id==0) clog<<"after bcast mpi_vector"<<endl;
-	/*clog<<my_id<<"==== "<<endl;
-	for(size_t i=0;i<ckt_name_info.size();i++){
-		clog<<ckt_name_info[i].name<<" "<<ckt_name_info[i].layer<<endl;
-	}*/
 	// first time parse:
 	create_circuits(ckt_name_vec);
 	if(my_id ==0){
-		// clog<<"before pre partitioning. "<<endl;
 		if(partition_flag == true){
 			pre_partition(my_id, mpi_class, tran, num_procs);
 		}
@@ -401,17 +353,16 @@ void Parser::parse(int &my_id, char * filename, MPI_CLASS &mpi_class, Tran &tran
 	
 	if(partition_flag)
 		return;	
-	if(my_id==0) clog<<"after pre partitioning."<<endl;
 
 	build_block_geo(my_id, mpi_class, tran, num_procs);
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	// temporary comment second parse	
-	if(my_id==0) clog<<"before second parse. "<<endl;
+	// if(my_id==0) clog<<"before second parse. "<<endl;
 	second_parse(my_id, mpi_class, tran, num_procs);
 
-	if(my_id==0) clog<<"after second parse."<<endl;
+	// if(my_id==0) clog<<"after second parse."<<endl;
 }
 
 void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
@@ -427,21 +378,16 @@ void Parser::build_block_geo(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int n
 
 	MPI_Bcast(&mpi_class.len_ovr_x, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	MPI_Bcast(&mpi_class.len_ovr_y, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	// clog<<my_id<<" "<<mpi_class.len_ovr_x<<" "<<mpi_class.len_ovr_y<<endl;
 
 	MPI_Scatter(mpi_class.geo, 4, MPI_FLOAT, 
 		mpi_class.block_geo, 4, MPI_FLOAT, 
 		0, MPI_COMM_WORLD);
-	/*clog<<my_id<<" "<<mpi_class.block_geo[0]<<" "<<mpi_class.block_geo[1]<<" "<<
-		mpi_class.block_geo[2]<<" "<<mpi_class.block_geo[3]<<endl;*/
 	if(my_id==0){
 		net_to_block(mpi_class.geo, mpi_class, tran, num_procs, my_id);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	//if(my_id==3)
-		//clog<<"lx, ly, ux, uy: "<<mpi_class.block_geo[0]<<" "<<mpi_class.block_geo[1]<<" "<<mpi_class.block_geo[2]<<" "<<mpi_class.block_geo[3]<<endl;
 	// stores the geo boundary line for internal node:
 	// e, w, n, s
 	mpi_class.block_geo_origin = new float [4];
@@ -455,12 +401,9 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 
 	int color = 0;
 	int block_size = mpi_class.block_size;
-	//if(block_size==0) return;
-	//for(int i=0;i<block_size;i++){
-		sprintf(buff, "./INPUT_FILE/netlist_%d%d.txt", color, my_id);
-		f = fopen(buff, "r");
-		if(f==NULL) report_exit("Input file not exist!\n");
-	//}
+	sprintf(buff, "./INPUT_FILE/netlist_%d%d.txt", color, my_id);
+	f = fopen(buff, "r");
+	if(f==NULL) report_exit("Input file not exist!\n");
 	
 	char line[MAX_BUF];
 	char type;
@@ -496,12 +439,6 @@ void Parser::second_parse(int &my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 	}	
 
 	fclose(f);
-	// release map_node resource
-	/*for(size_t i=0;i<(*p_ckts).size();i++){
-		Circuit * ckt = (*p_ckts)[i];
-		if(ckt->map_node.size()>0)
-			ckt->map_node.clear();
-	}*/
 	
 }// end of parse
 
@@ -514,17 +451,7 @@ void Parser::parse_dot(char *line, Tran &tran){
 	const char *sep = "= v() \n";
 	switch(line[1]){
 		case 't': // transient steps
-			/*sscanf(line, "%s %lf %lf", sname, 
-				&tran.step_t, &tran.tot_t);
-			tran.isTran = 1; // do transient ana;*/
-			//clog<<"step: "<<tran.step_t<<" tot: "<<tran.tot_t<<endl;
-			break;
 		case 'w': // output length
-			/*chs = strtok_r(line, sep, &saveptr);
-			chs = strtok_r(NULL, sep, &saveptr);
-			chs = strtok_r(NULL, sep, &saveptr);
-			tran.length = atoi(chs);*/
-			//clog<<"out len: "<<tran.length<<endl;
 			break;
 		case 'p': // print
 			chs = strtok_r(line, sep, &saveptr);
@@ -583,12 +510,10 @@ int Parser::extract_ckt_name(int &my_id,
 	fgets(line, MAX_BUF, f);
 
 	while(fgets(line, MAX_BUF, f)!=NULL){
-		//clog<<"line: "<<line<<endl;
 		if(line[0]=='*'){
 			// copy the entire line into stringstream
 			stringstream ss;
 			ss<< line;
-			// if(my_id==0) clog<<"line: "<<line<<endl;
 			int word_count = 0;
 			while(ss.getline(word, 10, ' ')){
 				if(word_count ==1 && (word[0] == 'v' || word[0] == 'V' ||
@@ -596,7 +521,6 @@ int Parser::extract_ckt_name(int &my_id,
 					//ckt_name(word);
 					strcpy(ckt_name.name, word);
 					ckt_name_vec.push_back(ckt_name);
-					// clog<<"ckt_name: "<<ckt_name.name<<endl;	
 				}
 				if(word_count >=2) break;	
 				word_count++;
@@ -606,32 +530,26 @@ int Parser::extract_ckt_name(int &my_id,
 			// find grid boundary x and y
 			sscanf(line, "%s %s %s", sname,sa,sb);
 			if(sa[0] == '0' || sb[0] == '0'){
-				// clog<<"line: "<<line<<endl;
 				// current nets
 			  if(sname[0] == 'I' || sname[0] == 'i'){
 				strcpy(line_s, line);
-				// clog<<"current line: "<<line<<endl;
 				chs = strtok_r(line_s, sep, &saveptr);
 				strcpy(sname, chs);
-				// clog<<"chs, sname: "<<chs<<" "<<sname<<endl;
 				chs = strtok_r(NULL, sep, &saveptr);
 				strcpy(sa, chs);
 				chs = strtok_r(NULL, sep, &saveptr);
 				strcpy(sb, chs);
 				chs = strtok_r(NULL, sep, &saveptr);
 				value = atof(chs);	
-				// clog<<"sname, sa, sb, value: "<<sname<<" "<<sa<<" "<<sb<<" "<<value<<endl;
 				// now skip the pulse current if any exists
 				while(chs !=NULL){
 					chs = strtok_r(NULL, sep, &saveptr);
 					if(chs == NULL) break;
-					// clog<<"chs: "<<chs<<endl;
 					strcpy(star_check, chs);
 					// read the coordinate
 					if(chs[0] == '*'){
 						chs = strtok_r(NULL, sep, &saveptr);
 						if(chs == NULL) break;
-						// clog<<"coord: chs: "<<chs<<endl;
 						strcpy(coord1, chs);
 						strcpy(coord2, coord1);
 						break;
@@ -647,7 +565,6 @@ int Parser::extract_ckt_name(int &my_id,
 			else 
 				sscanf(line, "%s %s %s %lf %s %s %s", sname,sa,sb, &value, 
 					star, coord1, coord2);
-			// clog<<"line: "<<line<<endl;	
 			//if( sa[0] != '0' )
 				extract_node(sa, nd[0], coord1);
 
@@ -670,12 +587,11 @@ int Parser::extract_ckt_name(int &my_id,
 			parse_dot(line, tran);
 		}
 	}
-	clog<<"finish extract coords from lines. "<<endl;
 	mpi_class.x_max = x_max;
 	mpi_class.x_min = x_min;
 	mpi_class.y_max = y_max;
 	mpi_class.y_min = y_min;
-	clog<<"power grid bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
+	// clog<<"power grid bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
 	fclose(f);
 	// sort resulting vector by the ckt name
 	sort(ckt_name_vec);
@@ -782,31 +698,25 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 			sscanf(line, "%s %s %s", sname,sa,sb);
 			if(sa[0] == '0' || sb[0] == '0'){
 				if(sname[0] == 'I' || sname[0] == 'i'){
-				  // clog<<endl<<"current line: "<<line;
 				  strcpy(line_s, line);
 				  chs = strtok_r(line_s, sep, &saveptr); 
-				  // clog<<"line again: "<<line<<endl;	
 				  strcpy(sname, chs);
-				  // clog<<"chs, sname: "<<chs<<" "<<sname<<endl;
 				  chs = strtok_r(NULL, sep, &saveptr);
 				  strcpy(sa, chs);
 				  chs = strtok_r(NULL, sep, &saveptr);
 				  strcpy(sb, chs);
 				  chs = strtok_r(NULL, sep, &saveptr);
 				  value = atof(chs);	
-				  // clog<<"sname, sa, sb, value: "<<sname<<" "<<sa<<" "<<sb<<" "<<value<<endl;
 				
 				  // now skip the pulse current if any exists
 				  while(chs !=NULL){
 					chs = strtok_r(NULL, sep, &saveptr);
 					if(chs == NULL) break;
-					// clog<<"chs: "<<chs<<endl;
 					// strcpy(star_check, chs);
 					// read the coordinate
 					if(chs[0] == '*'){
 						chs = strtok_r(NULL, sep, &saveptr);
 						if(chs == NULL) break;
-						// clog<<"coord: chs: "<<chs<<endl;
 						strcpy(coord1, chs);
 						strcpy(coord2, coord1);
 						break;
@@ -830,30 +740,20 @@ void Parser::net_to_block(float *geo, MPI_CLASS &mpi_class, Tran &tran, int num_
 				count_1 = cpr_nd_block(nd[0], geo, i);
 				count_2 = cpr_nd_block(nd[1], geo, i);
 
-				/*if(my_id==0){//&&nd[0].name == "n1_2024_174" && nd[1].name == "n1_2072_174"){
-					clog<<"line: "<<line<<endl;
-					clog<<count_1<<" "<<count_2<<endl;
-				}*/
 				if(nd[0].is_ground() && count_2 ==1){
 					temp = fprintf(of[i], "%s", line);
-					// clog<<"print line: "<<line<<endl;
 				}
 				else if(nd[1].is_ground() && count_1 ==1){
 					temp = fprintf(of[i], "%s", line);
-					// clog<<"print line: "<<line<<endl;
 				}
 				// write all voltage sources
-				//else if(count_1 + count_2 ==2){
 				else if(!nd[0].is_ground() && !nd[1].is_ground() 
 						&& (count_1 + count_2 >=1)){
 					temp = fprintf(of[i], "%s", line);
-					//if(my_id==0)
-					// clog<<"write: "<<temp<<" "<<i<<" "<<line<<endl;
 				}
 			}
 		}
 		else{
-			// clog<<"special lines. "<<line<<endl;
 			for(int i=0;i<num_procs;i++){
 				fprintf(of[i], "%s", line);
 			}
@@ -1059,17 +959,14 @@ void Parser::block_parse_dots(char *line, Tran &tran, int &my_id){
 			sscanf(line, "%s %lf %lf", sname, 
 				&tran.step_t, &tran.tot_t);
 			tran.isTran = 1; // do transient ana;
-			//clog<<"step: "<<tran.step_t<<" tot: "<<tran.tot_t<<endl;
 			break;
 		case 'w': // output length
 			chs = strtok_r(line, sep, &saveptr);
 			chs = strtok_r(NULL, sep, &saveptr);
 			chs = strtok_r(NULL, sep, &saveptr);
 			tran.length = atoi(chs);
-			//clog<<"out len: "<<tran.length<<endl;
 			break;
 		case 'p': // print
-			// clog<<"line: "<<line<<endl;
 			Node *nd_ptr;	
 			chs = strtok_r(line, sep, &saveptr);
 			chs = strtok_r(NULL, sep, &saveptr);
@@ -1077,15 +974,12 @@ void Parser::block_parse_dots(char *line, Tran &tran, int &my_id){
 				chs = strtok_r(NULL, sep, &saveptr);
 				if(chs == NULL) break;
 				item.name = chs;
-				// clog<<"name: "<<item.name<<endl;
 				for(size_t i=0;i<(*p_ckts).size();i++){
 					Circuit *ckt = (*p_ckts)[i];
 					it = ckt->map_node.find(item.name);
 					if(it!=ckt->map_node.end()){
 						// nd_ptr = it->second;
 						tran.nodes.push_back(item);
-						// if(my_id==0)
-						//clog<<"node: "<<*nd_ptr<<" "<<nd_ptr->pt<<endl;
 						break;
 					}
 				}
@@ -1119,16 +1013,13 @@ void Parser::write_print(Tran &tran, vector<FILE *> &of, MPI_CLASS &mpi_class, c
 
 	chs = strtok_r(NULL, sep_1, &saveptr_1);
 	while(chs != NULL){
-		// clog<<"chs: "<<chs<<endl;
 		if(string(chs) != "\n")
 			name_vec.push_back(string(chs));
 		chs = strtok_r(NULL, sep_1, &saveptr_1);
 	}
-	// clog<<"name_vec, size(): "<<name_vec.size()<<endl;
 	// then print the nodes
 	for(size_t i=0;i<name_vec.size();i++){
 		string tr_nd_name = name_vec[i];
-		//clog<<"name: "<<tr_nd_name<<endl;
 		char *p = &tr_nd_name[0];
 		chs = strtok_r(p, sep, &saveptr);
 		ndname = string(chs);
@@ -1147,8 +1038,6 @@ void Parser::write_print(Tran &tran, vector<FILE *> &of, MPI_CLASS &mpi_class, c
 		for(int j=0;j<num_blocks;j++){
 			if(x >= mpi_class.geo[4*j] && x<= mpi_class.geo[4*j+2]){
 				if(y >= mpi_class.geo[4*j+1]&& y <= mpi_class.geo[4*j+3]){
-					//clog<<"name again: "<<name_vec[i]<<endl;
-					//clog<<"belongs to block: "<<j<<" "<<x<<" "<<mpi_class.geo[4*j]<<" "<<mpi_class.geo[4*j+2]<<" "<<y<<" "<<mpi_class.geo[4*j+1]<<" "<<mpi_class.geo[4*j+3]<<endl;
 					fprintf(of[j], "v(%s) ", name_vec[i].c_str());	
 				}
 			}
@@ -1159,103 +1048,7 @@ void Parser::write_print(Tran &tran, vector<FILE *> &of, MPI_CLASS &mpi_class, c
 	}
 	name_vec.clear();
 }
-#if 0
-// only fit for the same layer net
-// map net into horizontal or vertical dir
-bool Parser::map_res_net(Net*net){
-	Node *a = net->ab[0];
-	Node *b = net->ab[1];
-	if(a->is_ground() || b->is_ground())
-		return true;
-	long xa = a->pt.x;
-	long ya = a->pt.y;
-		
-	long xb = b->pt.x;
-	long yb = b->pt.y;
 
-	long delta_x = abs(xa-xb);
-	long delta_y = abs(ya-yb);
-
-	double tan = 1.0* delta_y / delta_x;
-	// 45 degree
-	double ref = 1.0* sqrt(2) / 2;
-	// > 45 degree, goes to y then x dir
-	if(tan - ref > 1e-5){
-		// clog<<" > 45 degree. "<<endl;
-		bool flag_y = map_net_y(net);
-		if(flag_y == true) return true;
-		bool flag_x = map_net_x(net);
-		if(flag_x == true) return true;	
-		// clog<<"not empty for both south and north. "<<endl;
-	}
-	// <= 45 degree, goes to x dir
-	else{
-		// clog<<" < 45 degree. "<<endl;
-		bool flag_x = map_net_x(net);
-		if(flag_x == true) 
-			return true;
-		bool flag_y = map_net_y(net);
-		if(flag_y == true) 
-			return true;	
-		// clog<<"not empty for both south and north. "<<endl;	
-	}
-	clog<<"no spot to map the net. Fault. "<<endl;
-	return false;
-}
-
-// project along y direction
-bool Parser::map_net_y(Net *net){
-	Node *a = net->ab[0];
-	Node *b = net->ab[1];
-	long xa = a->pt.x;
-	long xb = b->pt.x;
-	long ya = a->pt.y;
-	long yb = b->pt.y;
-	
-	if(ya < yb && b->nbr[SOUTH] == NULL && a->nbr[NORTH] == NULL){
-		b->set_nbr(SOUTH, net);
-		a->set_nbr(NORTH, net);
-		clog<<"SOUTH of: "<<*b<<" NORTH of "<<*a<<endl;
-		return true;
-	}
-	else if(yb < ya && b->nbr[NORTH] == NULL && a->nbr[SOUTH] == NULL){
-		b->set_nbr(NORTH, net);
-		a->set_nbr(SOUTH, net);
-
-		clog<<"NORTH of: "<<*b<<" SOUTH of "<<*a<<endl;
-		return true;
-	}
-	return false;
-}
-
-// project along x direction
-bool Parser::map_net_x(Net *net){
-	Node *a = net->ab[0];
-	Node *b = net->ab[1];
-	long xa = a->pt.x;
-	long xb = b->pt.x;
-	long ya = a->pt.y;
-	long yb = b->pt.y;
-	
-	if(xa < xb && a->nbr[EAST] == NULL && b->nbr[WEST] == NULL){
-		a->set_nbr(EAST, net);
-		b->set_nbr(WEST, net);
-
-		clog<<"WEST of: "<<*b<<" EAST of "<<*a<<endl;
-		return true;
-
-	}
-	else if(xb < xa && b->nbr[EAST] == NULL && a->nbr[WEST] == NULL){
-		b->set_nbr(EAST, net);
-		a->set_nbr(WEST, net);
-
-		clog<<"WEST of: "<<*a<<" EAST of "<<*b<<endl;
-		return true;
-
-	}
-}
-#endif
- 
 void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran, int num_procs){
 	char line[MAX_BUF];
 	// processing original input file
@@ -1315,8 +1108,6 @@ void Parser::pre_partition(int my_id, MPI_CLASS &mpi_class, Tran &tran, int num_
 	if(my_id==0) clog<<"after explore_partition. "<<endl; 
 	// now clean all the resources for exploring partitioning
 	//clean_explore_partition(num_procs, mpi_class);
-	// if(my_id==0) clog<<"after clean explore partition. "<<endl;
-	// clog<<"after release ckt: "<<(*p_ckts).size()<<endl;	
 }// end of parse
 
 // given a line, extract net and node information
@@ -1341,14 +1132,10 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	const char *sep_1 = "_";
 	// find grid boundary x and y
 	sscanf(line, "%s %s %s", sname,sa,sb);
-	// if(my_id==1)
-		// clog<<"block 1 line, sa, sb: "<<line<<" "<<sa<<" "<<sb<<endl;
 	if(sa[0] == '0' || sb[0] == '0'){
-	// if(sa == "0" || sb == "0"){
 		sscanf(line, "%s %s %s %lf %s %s", sname,sa,sb, &value, star, coord1);
 		// copy string
 		strcpy(coord2, coord1);
-		// clog<<"coord1, coord2: "<<coord1<<" "<<coord2<<endl;
 		// coord2 = coord1;
 	}
 	else 
@@ -1359,11 +1146,9 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 	// ckt name
 	chs_1 = strtok_r(NULL, sep_1, &saveptr_1);
 	string ckt_name(chs_1);
-	// ckt_name.append(chs_1);
 	
 	extract_node(sa, nd[0], coord1);
 	extract_node(sb, nd[1], coord2);
-	//clog<<"after extract nodes. "<<endl;
 
 	int ckt_id = 0;
  	for(size_t i=0;i<(*p_ckts).size();i++){
@@ -1373,7 +1158,6 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 		}
 	}
 	Circuit * ckt = (*p_ckts)[ckt_id];
-	// cout<<endl<<"ckt, line: "<<ckt->name<<" "<<line;	
 	for(int i=0;i<2;i++){
 		if ( nd[i].is_ground() ){
 			nd_ptr[i] = ckt->nodelist[0]; // ground node
@@ -1397,7 +1181,6 @@ void Parser::pre_insert_net_node(char * line, int &my_id, MPI_CLASS &mpi_class){
 			nd_ptr[i]->ckt_name = ckt_name;
 			nd_ptr[i]->rep = nd_ptr[i];  // set rep to be itself
 			ckt->add_node(nd_ptr[i]);
-			// cout<<"ckt, add_node: "<<ckt->get_name()<<" "<<*nd_ptr[i]<<endl;
 		}
 	}	
 	
@@ -1449,7 +1232,6 @@ void Parser::build_x_y_list_map(){
 				continue;
 			ckt->x_list.push_back(nd->pt.x);
 			ckt->y_list.push_back(nd->pt.y);
-			// cout<<"i, node, x, y: "<<i<<" "<<*nd<<" "<<nd->pt<<" "<<nd->pt.x<<" "<<nd->pt.y<<endl;
 		}
 		// build ckt->x_list_nd_map
 		for(size_t j=0;j<ckt->x_list.size();j++){
@@ -1469,8 +1251,6 @@ void Parser::build_x_y_list_map(){
 		it_vec = std::unique(ckt->y_list.begin(), ckt->y_list.end());
 		ckt->y_list.resize(std::distance(ckt->y_list.begin(), it_vec));
 
-		// clog<<"x_list size: "<<x_list.size()<<endl;
-		// clog<<"y_list size: "<<y_list.size()<<endl;	
 		// now build x/y_list idmap
 		map<long, int> x_list_id_map;
 		map<long, int> y_list_id_map;
@@ -1480,28 +1260,12 @@ void Parser::build_x_y_list_map(){
 		for(size_t j=0;j<ckt->y_list.size();j++)
 			y_list_id_map[ckt->y_list[j]] = j;
 		
-#if 0
-		for(size_t i=0;i<x_list.size();i++){
-			cout<<"i, x_list: "<<i<<" "<<x_list[i]<<endl;
-		}
-		for(size_t i=0;i<y_list.size();i++){
-			cout<<"i, y_list: "<<i<<" "<<y_list[i]<<endl;
-		}
-#endif
-
-// #if 0	
-		// then accumulate the count
-		// map<long, int> x_list_map;
-		// map<long, int> y_list_map;
 		Net *net;
 		Node *na, *nb;
 		long x1, x2, y1, y2;
 		// only explore resistor net
 		int type_r = RESISTOR;
-		// for(size_t i=0;i<(*p_ckts).size();i++){
-			// Circuit *ckt = (*p_ckts)[i];
 		NetList &ns = ckt->net_set[type_r];
-		// clog<<"ckt net.size: "<<ckt->get_name()<<" "<<ns.size()<<endl;
 		for(size_t k=0;k<ns.size();k++){
 			na = ns[k]->ab[0]->rep;
 			nb = ns[k]->ab[1]->rep;
@@ -1522,13 +1286,10 @@ void Parser::build_x_y_list_map(){
 				y2 = na->pt.y;
 			}
 			
-			// clog<<"net: "<<*ns[k]<<endl;
 			int id_1 = x_list_id_map[x1];
 			int id_2 = x_list_id_map[x2];
-			// clog<<"id_1, id_2: "<<id_1<<" "<<id_2<<endl;
 			// map +1
 			for(size_t l = id_1;l<=id_2;l++){
-				// clog<<"i, x_list, x1, x2: "<<l<<" "<<x_list[l]<<" "<<x1<<" "<<x2<<endl;
 				ckt->x_list_bd_map[ckt->x_list[l]]++;	
 			}
 			
@@ -1539,24 +1300,9 @@ void Parser::build_x_y_list_map(){
 				ckt->y_list_bd_map[ckt->y_list[l]]++;	
 			}
 		}
-#if 0		
-		clog<<"start to output x and y list. "<<endl;
-		// scan the nets to count bd nets 
-		map<long, int>::iterator it;
-		for(it = ckt->x_list_bd_map.begin();it != ckt->x_list_bd_map.end();it++){
-			cout<<"ckt, x, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
-		}
-		cout<<endl;
-		for(it = ckt->y_list_bd_map.begin();it != ckt->y_list_bd_map.end();it++){
-			cout<<"ckt, y, count: "<<ckt->get_name()<<" "<<it->first<<" "<<it->second<<endl;	
-		}
-#endif
 		x_list_id_map.clear();
 		y_list_id_map.clear();
-		// x_list.clear();
-		// y_list.clear();
 	}
-// #endif
 }
 
 // explore the partitions with x_y_list_map
@@ -1623,7 +1369,6 @@ void Parser::explore_partition(int num_procs, MPI_CLASS &mpi_class){
 // explore one partition: X x Y
 // try to balance the number of nodes: +(-)10% of nodes of each block
 void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
-	// cout<<endl<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
 	double len_per_x, len_per_y;
 	size_t num_nodes = 0;
 	size_t num_nodes_x = 0;
@@ -1636,13 +1381,11 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 		num_nodes = ckt->nodelist.size()-1;
 		num_nodes_x = num_nodes / x_blocks;
 		num_nodes_y = num_nodes / y_blocks;
-		// cout<<"ckt, num_nodes_x, num_nodes_y: "<<ckt->get_name()<<" "<<num_nodes_x<<" "<<num_nodes_y<<endl;
 		size_t sum_nodes_x = 0;
 		size_t sum_nodes_y = 0;
 		if(x_blocks >1){
 			double thresh_l = num_nodes_x * 0.5;
 			double thresh_u = num_nodes_x * 1.5;
-			// cout<<"thresh_x l / u: "<<thresh_l<<" "<<thresh_u<<endl;
 			long min_bd = 0;
 			long min_coord = 0;
 			size_t min_sum_nodes_x = 0;
@@ -1651,22 +1394,18 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 			for(size_t j=0;j<ckt->x_list.size();j++){
 				long coord = ckt->x_list[j];
 				sum_nodes_x += ckt->x_list_nd_map[coord];
-				// cout<<"coord, num_nodes_x: "<<coord<<" "<<num_nodes_x<<endl;
 				// start to sample the bd nodes
 				if(sum_nodes_x >= thresh_l && sum_nodes_x <= thresh_u){
-					// clog<<"current, min: "<<ckt->x_list_bd_map[coord]<<" "<<min_bd<<endl;
 					if(min_bd == 0 || ckt->x_list_bd_map[coord] < min_bd){
 						min_bd = ckt->x_list_bd_map[coord];
 						min_coord = coord;
 						min_sum_nodes_x = sum_nodes_x;
 						min_j = j;
-						// clog<<"min_bd, coord: "<<min_bd<<" "<<min_coord<<" "<<min_sum_nodes_x<<endl;
 					}
 				}
 				if(sum_nodes_x > thresh_u){
 					x_coord_vec[i].push_back(min_coord);
 					x_bd_vec[i].push_back(min_bd);
-					// cout<<"x / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_x<<" "<<min_bd<<" "<<min_coord<<endl;
 					min_bd = 0;
 					if(j == ckt->x_list.size()-1)
 						break;
@@ -1675,7 +1414,6 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 					sum_nodes_x = 0;
 				}
 			}
-			// cout<<"x min_bd, min_coord: "<<min_bd<<" "<<min_coord<<endl;
 		}
 		if(y_blocks >1){
 			double thresh_l = num_nodes_y * 0.9;
@@ -1686,26 +1424,21 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 			size_t min_sum_nodes_y = 0;
 			size_t min_j=0;
 			int count = 0;
-			// cout<<"start to calculate y bd info. "<<y_blocks<<endl;
 			for(size_t j=0;j<ckt->y_list.size();j++){
 				long coord = ckt->y_list[j];
 				sum_nodes_y += ckt->y_list_nd_map[coord];
-				// cout<<"coord, num_nodes_x: "<<coord<<" "<<num_nodes_x<<endl;
 				// start to sample the bd nodes
 				if(sum_nodes_y >= thresh_l && sum_nodes_y <= thresh_u){
-					// clog<<"current, min: "<<ckt->x_list_bd_map[coord]<<" "<<min_bd<<endl;
 					if(min_bd == 0 || ckt->y_list_bd_map[coord] < min_bd){
 						min_bd = ckt->y_list_bd_map[coord];
 						min_coord = coord;
 						min_sum_nodes_y = sum_nodes_y;
 						min_j = j;
-						// clog<<"min_bd, coord: "<<min_bd<<" "<<min_coord<<" "<<min_sum_nodes_x<<endl;
 					}
 				}
 				if(sum_nodes_y > thresh_u){
 					y_coord_vec[i].push_back(min_coord);
 					y_bd_vec[i].push_back(min_bd);
-					// cout<<"y / count, num_nodes, min_bd, min_coord: "<<count++<<" "<<min_sum_nodes_y<<" "<<min_bd<<" "<<min_coord<<endl;
 					min_bd = 0;
 					if(j == ckt->y_list.size()-1)
 						break;
@@ -1714,28 +1447,22 @@ void Parser::explore_one_partition_balance(int x_blocks, int y_blocks){
 					sum_nodes_y = 0;	
 				}
 			}
-			
-			// clog<<"min_bd, min_coord: "<<min_bd<<" "<<min_coord<<endl;
 		}
 	}
 }
 
 // explore one partition: X x Y
 void Parser::explore_one_partition(int x_blocks, int y_blocks){
-	// clog<<"par: X x Y: "<<x_blocks<<" "<<y_blocks<<endl;
 	double len_per_x, len_per_y;
 	for(int i=0;i<1;i++){//(*p_ckts).size();i++){
 		Circuit *ckt = (*p_ckts)[i];
-		// clog<<"ckt->lx, ly, ux, uy: "<<ckt->lx<<" "<<ckt->ly<<" "<<ckt->ux<<" "<<ckt->uy<<endl;
 		len_per_x = (ckt->ux - ckt->lx+0.5)*1.0 / x_blocks;
 		len_per_y = (ckt->uy - ckt->ly+0.5)*1.0 / y_blocks;
-		// clog<<"ckt, len_x / y: "<<ckt->get_name()<<" "<<len_per_x<<" "<<len_per_y<<endl;
 		int sum_bd_nets = 0;
 		
 		// bd nets along x dir
 		for(int j=0;j<x_blocks-1;j++){
 			long bd_x = j*len_per_x + floor(len_per_x);
-			// clog<<"x, bd: "<<bd_x<<endl;
 			double min_dist = -1;
 			int min_id = 0;
 			for(int k=0;k<ckt->x_list.size();k++){
@@ -1789,5 +1516,4 @@ void Parser::clean_explore_partition(int num_procs, MPI_CLASS &mpi_class){
 		Circuit *ckt = (*p_ckts)[i];
 		ckt->clean_explore();	
 	}
-	// clog<<"after release ckt resource"<<endl;
 }
