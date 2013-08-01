@@ -594,9 +594,6 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 		assign_bd_array(my_id);
 	}
 	if(iter == 0){
-
-		// reset_bd_array(my_id);
-		// reset_replist(my_id);
 		for(size_t i=0;i<block_vec.size();i++){
 			block_vec[i]->copy_array(block_vec[i]->bnewp_temp, block_vec[i]->bnewp);
 		}
@@ -623,17 +620,9 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 
 	// new rhs store in bnewp
 	for(size_t i=0;i<block_vec.size();i++){
-		/*if(my_id==0)
-			clog<<endl<<"before update rhs. "<<i<<endl;*/
-		//block_info.solve_CK(cm);
 		if(block_vec[i]->count >0){
 			block_vec[i]->solve_CK_tr();
-			/*if(my_id==0)
-				for(size_t j=0;j<block_vec[i]->count;j++)
-					clog<<"j, xp: "<<j<<" "<<block_vec[i]->xp[j]<<endl;*/
 		}
-		//solve_eq_sp(block_info.xp, block_info.bnewp);
-			//block_info.xp = static_cast<double *>(block_info.x_ck->x);
 		
 		double local_diff = 
 			block_vec[i]->modify_voltage(my_id);
@@ -641,11 +630,7 @@ double Circuit::solve_iteration_tr(int &my_id, int &iter,
 			diff = local_diff;
 
 	}
-	/*if(my_id==1)
-		for(int i=0;i<replist.size();i++)
-			clog<<"xp: "<<i<<" "<<*replist[i]<<" "<<endl;*/
 
-	// clog<<"diff: "<<my_id<<" "<<diff<<endl;
 	assign_bd_internal_array(my_id);
 
 	// 0 rank cpu will gather all the solution 
@@ -689,26 +674,10 @@ double Circuit::solve_iteration(int &my_id, int &iter,
 	}
 	// solve_blocks until converge
 	block_solve(my_id);
-	//block_solve_Jacobi(my_id);
 
 	diff = find_diff(my_id);
-	// if(my_id==0)
-		//cout<<"find diff: "<<diff<<endl;
 	MPI_Barrier(MPI_COMM_WORLD);
-	// new rhs store in bnewp and solve
-	/*for(size_t i=0; i < block_vec.size();i++){
-		
-
-		block_vec[i]->solve_CK_DC(my_id);
-		double local_diff = 
-			block_vec[i]->modify_voltage(my_id);
-		//if(my_id==0)
-			//clog<<"local_diff: "<<local_diff<<endl;
-		if(local_diff > diff)
-			diff = local_diff;
-	}*/
-	// if(my_id==0)
-		//clog<<"diff: "<<diff<<endl;
+	
 	assign_bd_internal_array(my_id);
 	// 0 rank cpu will gather all the solution from bd_x
 	// to bd_x_g
@@ -787,8 +756,6 @@ void Circuit::boundary_init(int &my_id, int &num_procs){
 	// allocate boundary_nodelist size
 	bd_dd_size_g = new int [8*num_procs];	
 	
-	//if(my_id==0)
-		//clog<<"before gathering bd_dd_size. "<<my_id<<endl;
 	MPI_Gather(bd_dd_size, 8, MPI_INT, bd_dd_size_g, 
 			8, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -891,28 +858,20 @@ void Circuit::assign_internal_base(int &my_id){
 
 // assign bd internal arrays
 void Circuit::assign_bd_internal_array(int &my_id){
-	//clog<<"sw: "<<endl;
 	assign_bd_internal_array_dir(internal_base[0], 
 		internal_nodelist_sw, internal_x, my_id);
-	//clog<<"s: "<<endl;
 	assign_bd_internal_array_dir(internal_base[1], 
 		internal_nodelist_s, internal_x, my_id);
-	//clog<<"se: "<<endl;
 	assign_bd_internal_array_dir(internal_base[2], 
 		internal_nodelist_se, internal_x, my_id);
-	//clog<<"w: "<<endl;
 	assign_bd_internal_array_dir(internal_base[3], 
 		internal_nodelist_w, internal_x, my_id);
-	//clog<<"e: "<<endl;
 	assign_bd_internal_array_dir(internal_base[4], 
 		internal_nodelist_e, internal_x, my_id);
-	//clog<<"nw: "<<endl;
 	assign_bd_internal_array_dir(internal_base[5], 
 		internal_nodelist_nw, internal_x, my_id);
-	//clog<<"n: "<<endl;
 	assign_bd_internal_array_dir(internal_base[6], 
 		internal_nodelist_n, internal_x, my_id);
-	//clog<<"ne: "<<endl;
 	assign_bd_internal_array_dir(internal_base[7], 
 		internal_nodelist_ne, internal_x, my_id);
 }
@@ -924,8 +883,6 @@ void Circuit::assign_bd_internal_array_dir(int &base, NodePtrVector & list, doub
 	for(size_t i=0;i<list.size();i++){
 		nd = list[i]->rep;
 		internal_x[base+i] = nd->value;
-		//if(my_id==0)
-		//clog<<base+i<<" "<<*nd<<endl;
 	}
 }
 
@@ -1021,7 +978,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 	for(int i=0;i<total_blocks;i++){
 		by = i / X_BLOCKS;
 		bx = i % X_BLOCKS;
-		//clog<<"reorder for "<<i<<" th block."<<endl<<endl;
 		// compute block base for i
 		base_glo_p = bd_base_g[i];
 
@@ -1029,7 +985,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i];
 		if(by>=1 && bx>=1){
 			bid_nbr = i - X_BLOCKS - 1;
-			//clog<<"east bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
@@ -1037,7 +992,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 			size = bd_dd_size_g[8*i];
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 		
@@ -1045,16 +999,13 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i+1];
 		if(by>=1){
 			bid_nbr = i - X_BLOCKS;
-			//clog<<"south bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
 			base_q = base_glo_q+internal_base_gd[8*bid_nbr+6];
 			size = bd_dd_size_g[8*i+1];
-			//clog<<size<<endl;
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 
@@ -1062,7 +1013,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i+2];
 		if(by>=1 && bx<X_BLOCKS-1){
 			bid_nbr = i - X_BLOCKS + 1;
-			//clog<<"east bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
@@ -1070,7 +1020,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 			size = bd_dd_size_g[8*i+2];
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 
@@ -1078,7 +1027,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i+3];
 		if(bx>=1){
 			bid_nbr = i - 1;
-			//clog<<"west bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
@@ -1086,27 +1034,20 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 			size = bd_dd_size_g[8*i+3];
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 
 		// east nbr dir
 		base_p = base_glo_p+bd_base_gd[8*i+4];
-		//clog<<"base_glo_p: "<<base_glo_p<<" base_p: "<<base_p<<endl;
 		if(bx<X_BLOCKS-1){
 			bid_nbr = i+1;
-			//clog<<"east bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
-			//clog<<"base_glo_q: "<<base_glo_q<<" ";
 			// find east nbr block base
 			base_q = base_glo_q+internal_base_gd[8*bid_nbr+3];
-			//clog<<"base_q: "<<base_q<<endl;
 			size = bd_dd_size_g[8*i+4];
-			//clog<<"size: "<<size<<endl;
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 		
@@ -1114,7 +1055,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i+5];
 		if(by<Y_BLOCKS-1 && bx>=1){
 			bid_nbr = i + X_BLOCKS - 1;
-			//clog<<"notrhwest bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
@@ -1122,7 +1062,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 			size = bd_dd_size_g[8*i+5];
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 
@@ -1130,7 +1069,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i+6];
 		if(by<Y_BLOCKS-1){
 			bid_nbr = i + X_BLOCKS;
-			//clog<<"north bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
@@ -1138,7 +1076,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 			size = bd_dd_size_g[8*i+6];
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 
@@ -1146,7 +1083,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 		base_p = base_glo_p+bd_base_gd[8*i+7];
 		if(by<Y_BLOCKS-1 && bx<X_BLOCKS-1){
 			bid_nbr = i + X_BLOCKS + 1;
-			//clog<<"north east bid: "<<bid_nbr<<endl;
 			// compute block base
 			base_glo_q = internal_base_g[bid_nbr];
 			// find east nbr block base
@@ -1154,7 +1090,6 @@ void Circuit::reorder_bd_x_g(MPI_CLASS &mpi_class){
 			size = bd_dd_size_g[8*i+7];
 			for(int j=0;j<size;j++){
 				bd_x_g[base_p+j] = internal_x_g[base_q+j];
-				//clog<<base_p+j<<" "<<base_q+j<<" "<<internal_x_g[base_q+j]<<endl;
 			}
 		}
 	}
@@ -1223,8 +1158,6 @@ void Circuit::assign_bd_array_dir(int &base, NodePtrVector &list, int &my_id){
 	for(size_t i=0;i<list.size();i++){
 		p = list[i]->rep;
 		p->value = bd_x[base+i];
-		// if(my_id==0)
-			// clog<<"bd_array: "<<*p<<endl;
 	}
 }
 
@@ -1232,14 +1165,7 @@ void Circuit::assign_bd_array_dir(int &base, NodePtrVector &list, int &my_id){
 void Circuit:: save_ckt_nodes(Tran &tran){//, double *x){
    size_t id=0;
    for(size_t j=0;j<ckt_nodes.size();j++){
-	 //cout<<"nodes: "<<ckt_nodes[j].node->name<<endl;
-         // id = ckt_nodes[j].node->rep->rid;
-	 //cout<<"value: "<<x[id]<<endl;
-         // ckt_nodes[j].value.push_back(x[id]);
 	 ckt_nodes[j].value.push_back(ckt_nodes[j].node->rep->value);
-
-	   // if(my_id==0)
-		//   cout<<"ckt_nodes, value: "<<*ckt_nodes[j]<<" "<<ckt_nodes[j].node->rep->value;
       }
 }
 
@@ -1250,13 +1176,9 @@ void Circuit::save_ckt_nodes_to_tr(Tran &tran){
 	double value = 0;
 	for(size_t i=0;i<ckt_nodes.size();i++){
 		index = ckt_nodes[i].flag;
-		//cout<<"ckt_nodes, index: "<<ckt_nodes[i].node->name
-			//<<" "<<ckt_nodes[i].flag<<endl;
-		//tran.nodes[index].node = ckt_nodes[i];
 		j=0;
 		for(time = 0; time < tran.tot_t; time+=tran.step_t){
 			value = ckt_nodes[i].value[j];
-			//cout<<"time, value: "<<time<<" "<<value<<endl;
 			tran.nodes[index].value.push_back(value);
 			j++;
 		}
@@ -1267,19 +1189,13 @@ void Circuit::save_ckt_nodes_to_tr(Tran &tran){
 void Circuit:: link_ckt_nodes(Tran &tran, int &my_id){
       for(size_t j=0;j<tran.nodes.size();j++){
 	tran.nodes[j].node = get_node(tran.nodes[j].name);
-	// if(tran.nodes[j].node)
-	// clog<<"tran nodes: "<<*tran.nodes[j].node<<endl;
 	}
-   // clog<<"tran.node size: "<<tran.nodes.size()<<endl;
    Node_TR_PRINT nodes_temp;
    for(size_t i=0;i<nodelist.size();i++){
       for(size_t j=0;j<tran.nodes.size();j++){
          if(nodelist[i]->name == tran.nodes[j].name){
 	    // record the index in tran.nodes
 	    nodes_temp.flag = j;
-	    // if(my_id==0)
-	    	// clog<<"tran.nodes, index: "<<
-		//nodelist[i]->name<<" "<<nodes_temp.flag<<endl; 
 	    nodes_temp.node = nodelist[i];
 	    ckt_nodes.push_back(nodes_temp);
             // record the id for ckt_nodes
@@ -1314,136 +1230,6 @@ void Circuit::current_tr(Net *net, double &time){
 		net->value = net->tr[0];
 	//return current;
 }
-
-#if 0
-// add Ieq into rhs
-// Ieq = i(t) + 2*C / delta_t *v(t)
-void Circuit::modify_rhs_c_tr_0(Net *net, double * rhs, double *x, int &my_id){
-	double i_t = 0;
-	double temp = 0;
-	double Ieq = 0;
-	//if(my_id==0)
-	//clog<<"c net: "<<*net<<" net->flag_bd: "<<net->flag_bd<< endl;
-	Node *nk = net->ab[0]->rep;
-	Node *nl = net->ab[1]->rep;
-        // nk point to Z node
-        if(nk->isS() != Z){
-		swap<Node *>(nk, nl);
-		swap<Node*>(net->ab[0], net->ab[1]);
-	}
-	//if(my_id==0)
-	//clog<<"nk, nl: "<<*nk<<" "<<*nl<<endl;
-	size_t k = nk->rid;
-	size_t l = nl->rid;
-	//if(my_id==0)
-	//clog<<"k, l: "<<k<<" "<<l<<" "<<nk->flag_bd<<" "<<nl->flag_bd<<endl;
-
-	Net *r = nk->nbr[TOP];
-	Node *a = r->ab[0]->rep;
-	Node *b = r->ab[1]->rep;
-	// a point to Z node
-	if(a->isS()!=Z) {
-		swap<Node *>(a, b);
-		swap<Node*>(r->ab[0], r->ab[1]);
-	}
-	//clog<<"a, b: "<<*a<<" "<<*b<<endl;
-
-	size_t id_a = a->rid;
-	size_t id_b = b->rid;
-	//i_t = (b->value - a->value) / r->value;
-	i_t = (x[id_b] - x[id_a]) / r->value;
-	//if(b->value != x[id_b] || a->value != x[id_a])
-	   //cout<<"a, b, x_a, x_b: "<<a->value<<" "<<b->value<<" "<<
-	     //x[id_a]<<" "<<x[id_b]<<endl;
-	//clog<<"i_t: "<<i_t<<endl;
-	//temp = 2*net->value / tran.step_t * 
-		//(nk->value - nl->value);
-       
-        // push 2 nodes into node_set_x
-        //clog<<*nk<<" "<<k<<endl;
-//#if 0
-        pg.node_set_x.push_back(k);
-        if(!nl->is_ground()) {
-              //clog<<*nl<<" "<<l<<endl;
-           pg.node_set_x.push_back(l);
-        }
-        else if(!b->is_ground()){
-              //clog<<*b<<" "<<id_b<<endl;
-           pg.node_set_x.push_back(id_b);
-        }
-//#endif
-	//if(my_id==0)
-	//	clog<<"before calc temp. "<<endl;
-	if(nk->is_ground())
-	 //temp = 2*net->value/tran.step_t*(0-x[l]);
-	 temp = net->value *(-x[l]);
-        else if(nl->is_ground()){
-         //temp = 2*net->value/tran.step_t *(x[k]);
-	 temp = net->value *x[k];
-        }
-        else
-         //temp = 2*net->value/tran.step_t *(x[k] - x[l]);
-	 temp = net->value *(x[k]-x[l]);
-	//if(nk->value != x[k] || nl->value != x[l])
-	   //cout<<"k, l, x_k, x_l: "<<nk->value<<" "<<nl->value<<" "<<
-	     //x[k]<<" "<<x[l]<<endl;
-	//clog<<"nk-nl "<<(nk->value - nl->value)<<" "<<2*net->value/tran.step_t<<" "<<temp<<endl;
-	
-	Ieq  = (i_t + temp);
-	//if(my_id==0)
-	//clog<< "Ieq is: "<<Ieq<<endl;
-	//clog<<"Geq is: "<<2*net->value / tran.step_t<<endl;
-	if(!nk->is_ground()&& nk->isS()!=Y){
-		 rhs[k] += Ieq;	// for VDD circuit
-		 //if(my_id==1)
-		    // clog<<k<<" "<<*nk<<" rhs +: "<<rhs[k]<<endl;
-	}
-	if(!nl->is_ground()&& nl->isS()!=Y){
-		 rhs[l] += -Ieq; 
-		 //if(my_id==1)
-		    // clog<<l<<" "<<*nl<<" rhs +: "<<rhs[l]<<endl;
-	}
-	//if(my_id==0)
-	//	clog<<"finish 1 net. "<<endl;
-}
-
-// add Ieq into rhs
-// Ieq = i(t) + 2*C / delta_t *v(t)
-void Circuit::modify_rhs_c_tr(Net *net, double * rhs, double *x){
-	double temp = 0;
-	//clog<<"c net: "<<*net<<endl;
-	Node *nk = net->ab[0]->rep;
-	Node *nl = net->ab[1]->rep;
-        
-	// nk point to Z node
-	size_t k = nk->rid;
-	size_t l = nl->rid;
-
-	Net *r = nk->nbr[TOP];
-	Node *a = r->ab[0]->rep;
-	Node *b = r->ab[1]->rep;
-	// a point to Z node
-
-	size_t id_a = a->rid;
-	size_t id_b = b->rid;
-	double i_t = (x[id_b] - x[id_a]) / r->value;
-	
-	if(nk->is_ground())
-	 temp = net->value *(-x[l]);
-        else if(nl->is_ground())
-	 temp = net->value *x[k];
-        else
-	 temp = net->value *(x[k]-x[l]);
-	
-	double Ieq  = i_t + temp;
-	if(!nk->is_ground()&& nk->isS()!=Y){
-		 rhs[k] += Ieq;	// for VDD circuit
-	}
-	if(!nl->is_ground()&& nl->isS()!=Y){
-		 rhs[l] -= Ieq; 
-	}
-}
-#endif
 
 void Circuit::set_eq_induc(Tran &tran){
 	NetPtrVector &ns = net_set[INDUCTANCE];
@@ -1508,8 +1294,6 @@ bool Circuit::solve_tr_step(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 			break;
 		}
 	}
-	// if(my_id==0)
-		// clog<<"after solve tr. "<<endl;
 	// copy the values from replist to nodelist
 	for(size_t i=0;i<nodelist.size()-1;i++){
 		Node *nd = nodelist[i];
@@ -1576,9 +1360,6 @@ void Circuit::solve_DC(int &num_procs, int &my_id, MPI_CLASS &mpi_class){
 		clog<<"solve DC cost (mpi): "<<time<<" secs."<<endl;
 		clog<<"solve DC cost (c_time): "<<1.0*(end_e-start_e)/CLOCKS_PER_SEC<<" secs. "<<endl;
 	}
-	// get_voltages_from_block_LU_sol();
-	// if(my_id==0)
-		// clog<<nodelist<<endl;
 }
 
 // check if matrix is SPD or not
@@ -1629,7 +1410,6 @@ void Circuit::update_geometry(int my_id, MPI_CLASS &mpi_class){
 	y_min = mpi_class.block_geo[1];
 	x_max = mpi_class.block_geo[2];
 	y_max = mpi_class.block_geo[3];
-	// clog<<"ckt bd: "<<x_min<<" "<<y_min<<" "<<x_max<<" "<<y_max<<endl;
 
 	num_blocks = NUM_BLOCKS_X * NUM_BLOCKS_Y;
 	if(my_id==0)
@@ -1657,9 +1437,6 @@ void Circuit::update_geometry(int my_id, MPI_CLASS &mpi_class){
 			block_vec[id_block]->ly = new_base_y;  
 			block_vec[id_block]->ux = new_base_x + delta_x;
 			block_vec[id_block]->uy = new_base_y + delta_y;
-
-			// if(my_id==0)
-				// clog<<block_vec[id_block]->lx<<" "<<block_vec[id_block]->ux<<" "<<block_vec[id_block]->ly<<" "<<block_vec[id_block]->uy<<endl;
 		}
 	}
 }
@@ -1692,9 +1469,6 @@ void Circuit::assign_block_nodes(int my_id){
 	for(size_t i=0;i<block_vec.size();i++){
 		block_vec[i]->count = block_vec[i]->replist.size();
 		block_vec[i]->sort_nodes();
-		/*if(my_id==0)
-			for(size_t j=0;j<block_vec[i]->replist.size();j++)
-				cout<<"j, node: "<<*block_vec[i]->replist[j]<<" "<<j<<endl;*/
 		block_vec[i]->build_nd_IdMap();
 	}
 }
@@ -1741,9 +1515,6 @@ void Circuit::assign_block_nets(int my_id){
 		net_flag = 0;
 		for(int j=0;j<block_vec.size();j++){
 			net_flag = block_vec[j]->net_in_block(net);
-
-			// if(my_id==0)
-				// cout<<"block, net, flag: "<<i<<" "<<j<<" "<<*net<<" "<<net_flag<<endl;
 			if(net_flag == 2)
 				block_vec[j]->net_set[type].push_back(net);
 			else if(net_flag ==1)
@@ -1777,27 +1548,15 @@ void Circuit::block_solve_Jacobi(int my_id){
 		// assign all the values into nodes
 		// new rhs store in bnewp and solve
 		for(size_t i=0; i < block_vec.size();i++){
-			/*if(my_id==0){
-				cout<<"solving block: "<<i<<endl;
-				cout<<"bd lx, ly, ux, ly: "<<block_vec[i]->lx<<" "<<block_vec[i]->ly<<" "<<block_vec[i]->ux<<" "<<block_vec[i]->uy<<endl;
-			}*/
 			block_vec[i]->solve_CK_DC_Jacobi(my_id);
 		}
 		for(size_t i=0; i < block_vec.size();i++){
-			// if(my_id==0)
-				// clog<<"modify block: "<<i<<" "<<block_vec[i]->lx<<" "<<block_vec[i]->ly<<" "<<block_vec[i]->ux<<" "<<block_vec[i]->uy<<endl;
 			double local_diff = 
 				block_vec[i]->modify_voltage(my_id);
-			// if(my_id==0)
-				//clog<<"my_id, i, local_diff: "<<my_id<<" "<<i<<" "<<local_diff<<endl;
 			if(local_diff > diff)
 				diff = local_diff;
 		}
-		// if(my_id==0)
-			// clog<<"my_id, iter, diff: "<<my_id<<" "<<iter<<" "<<diff<<endl;
 		iter ++;
-		//if(my_id==0)
-			//cout<<"solution: "<<nodelist<<endl;
 	}
 }
 
@@ -1808,25 +1567,13 @@ void Circuit::block_solve(int my_id){
 		diff = 0;
 		// new rhs store in bnewp and solve
 		for(size_t i=0; i < block_vec.size();i++){
-			/*if(my_id==0){
-				cout<<"solving block: "<<i<<endl;
-				cout<<"bd lx, ly, ux, ly: "<<block_vec[i]->lx<<" "<<block_vec[i]->ly<<" "<<block_vec[i]->ux<<" "<<block_vec[i]->uy<<endl;
-			}*/
 			block_vec[i]->solve_CK_DC(my_id);
-			// if(my_id==0)
-				// clog<<"modify block: "<<i<<" "<<block_vec[i]->lx<<" "<<block_vec[i]->ly<<" "<<block_vec[i]->ux<<" "<<block_vec[i]->uy<<endl;
 			double local_diff = 
 				block_vec[i]->modify_voltage(my_id);
-			// if(my_id==0)
-				// clog<<"my_id, i, local_diff: "<<my_id<<" "<<i<<" "<<local_diff<<endl;
 			if(local_diff > diff)
 				diff = local_diff;
 		}
-		// if(my_id==0)
-			// clog<<"my_id, iter, diff: "<<my_id<<" "<<iter<<" "<<diff<<endl;
 		iter ++;
-		//if(my_id==0)
-			//cout<<"solution: "<<nodelist<<endl;
 	}
 }
 
@@ -1855,25 +1602,19 @@ void Circuit::clean_explore(){
 	ly = -1;
 	ux = -1;
 	uy = -1;
-	// clog<<"before pre release circuit. "<<endl;
 	// clean nodelist and netlist
 	pre_release_circuit();	
-	// clog<<"after pre release circuit. "<<endl;
 }
 
 void Circuit::push_bd_nodes_one_set(Path_Graph &pg, int&my_id, NodePtrVector internal_set){
 	Node *nd;
 	// s direction
 	size_t n_s = internal_set.size();
-	// if(my_id==0)
-	// cout<<"my_id, ns size: "<<my_id<<" "<<n_s<<endl;
 	for(size_t i=0;i<n_s;i++){
 		nd = internal_set[i]->rep;
 		for(int j=0;j<block_vec.size();j++){
 			if(!block_vec[j]->node_in_block(nd))
 				continue;
-			// if(my_id==0)
-			// cout<<"block j push nd: "<<j<<" "<<*nd<<" "<<nd->pt<<endl;
 			block_vec[j]->push_nd_pg_x(nd);
 		}
 	}
