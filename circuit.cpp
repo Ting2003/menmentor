@@ -71,12 +71,9 @@ void Circuit::pre_release_circuit(){
 	// delete node
 	for(size_t i=0;i<nodelist.size();i++){
 		if(!nodelist[i]->is_ground()){
-			// clog<<"node: "<<*nodelist[i]<<endl;
 		 	free(nodelist[i]);
-		// clog<<"finish deleting i: "<<i<<" th node. "<<endl;
 		}
 	}
-	// nodelist.clear();
 	// delete nets
 	for(int type=0;type<NUM_NET_TYPE;type++){
 		NetList & ns = net_set[type];
@@ -84,7 +81,6 @@ void Circuit::pre_release_circuit(){
 		for(it=ns.begin();it!=ns.end();++it)
 			free(*it);
 	}
-	// clog<<"after release netlist. "<<endl;
 }
 
 // Trick: do not release memory to increase runtime
@@ -134,11 +130,6 @@ Circuit::~Circuit(){
 			delete *it;
 	}
 
-	// free Li, Lx and so on
-	/*delete [] Lx;
-	delete [] Lp;
-	delete [] Lnz;
-	delete [] Li;*/
 	// mpi related variables
 	delete [] bd_x_g;
 	delete [] internal_x_g;
@@ -330,15 +321,7 @@ void Circuit::print_matrix(Matrix A){
 # endif
 
 	}
-#if 0	// don't output ground node
-	for(size_t i=0;i<A.size();i++){
-		fprintf(f, "%d %d %.10e\n", A.Ti[i]+1, A.Tj[i]+1, A.Tx[i]);
-# if DEBUG_flag
-		if(A.Ti[i] != A.Tj[i])
-			fprintf(f, "%d %d %.10e\n", A.Tj[i]+1, A.Ti[i]+1, A.Tx[i]);
-# endif
-	}
-#endif
+
 	fclose(f);
 	matrix_map.clear();
 }
@@ -352,11 +335,6 @@ void Circuit::print_rhs(){
 	f = fopen(ss.str().c_str(),"w");
 	// print title line
 	fprintf(f, "\%\%MatrixMarket matrix array real general\n");
-	/*size_t count = 0;
-	for(size_t i=0;i<block_info.count;i++)
-		if(block_info.bnewp[i] !=0)
-			count++;
-	clog<<"count: "<<count<<endl;*/
 	// print 1st line
 	fprintf(f, "%d %d\n", block_vec[0]->count, 1);
 
@@ -396,8 +374,6 @@ void Circuit::print_solution(){
 // 4. get representative lists
 void Circuit::solve_init(int &my_id){
 	sort_nodes();
-	// if(my_id==0)
-		// clog<<"total num_nodes: "<<nodelist.size()<<endl;
 	sort_bd_nodes(my_id);
 	sort_internal_nodes(my_id);
 
@@ -408,28 +384,6 @@ void Circuit::solve_init(int &my_id){
 		VDD = ns[i]->value;
 		break;		
 	}
-	/*if(my_id==3){
-		clog<<"sw: "<<internal_nodelist_sw<<endl;
-		clog<<"s: "<<internal_nodelist_s<<endl;
-		clog<<"se: "<<internal_nodelist_se<<endl;
-		clog<<"w: "<<internal_nodelist_w<<endl;
-		clog<<"e: "<<internal_nodelist_e<<endl;
-		clog<<"nw: "<<internal_nodelist_nw<<endl;
-		clog<<"n: "<<internal_nodelist_n<<endl;
-		clog<<"ne: "<<internal_nodelist_ne<<endl;
-		clog<<endl;
-	}
-
-	if(my_id==3){
-		clog<<"sw: "<<bd_nodelist_sw<<endl;
-		clog<<"s: "<<bd_nodelist_s<<endl;
-		clog<<"se: "<<bd_nodelist_se<<endl;
-		clog<<"w: "<<bd_nodelist_w<<endl;
-		clog<<"e: "<<bd_nodelist_e<<endl;
-		clog<<"nw: "<<bd_nodelist_nw<<endl;
-		clog<<"n: "<<bd_nodelist_n<<endl;
-		clog<<"ne: "<<bd_nodelist_ne<<endl;
-	}*/
 
 	size_t size = nodelist.size() - 1;
 	Node * p = NULL;
@@ -437,16 +391,7 @@ void Circuit::solve_init(int &my_id){
 	size_t i=0;
 	for(i=0, nr=0;i<size;i++){
 		p=nodelist[i];
-		/*Net * net = p->nbr[TOP];	
-		// test short circuit
-		if( p->isS() !=Y && // Y must be representative 
-		    net != NULL &&
-		    fzero(net->value) ){
-			// TODO: ensure ab[1] is not p itself
-			assert( net->ab[1] != p );
-			p->rep = net->ab[1]->rep;
-		} // else the representative is itself
-		*/
+		
 		// push the representatives into list
 		if( p->rep == p ) {
 			replist.push_back(p);
@@ -456,26 +401,10 @@ void Circuit::solve_init(int &my_id){
 		}	
 	}// end of for i
 
-	/*if(my_id==0){
-		cout<<endl;
-		for(int i=0;i<nodelist.size()-1;i++)
-			cout <<*nodelist[i]<<" "<<nodelist[i]->rid<<endl;
-		//clog<<endl;
-	}*/
-	
-
-	// if(nr >=0)
-		// block_info.count = nr;
-
 	size_t n_nodes = nodelist.size();
 	size_t n_reps  = replist.size();
-	
-	/*clog<<"replist    "<<n_reps <<endl;
-	clog<<"nodelist   "<<n_nodes<<endl;
-	clog<<"ratio =    "<<ratio  <<endl;*/
 
 	net_id.clear();
-	//clog<<my_id<<" "<<block_info.count<<endl;
 }
 
 // build up block info
@@ -499,7 +428,6 @@ void Circuit::block_init(int &my_id, MPI_CLASS &mpi_class){
 void Circuit::solve(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tran){
 	// each block is solved by IT
 	solve_IT(my_id, num_procs, mpi_class, tran);
-	//clog<<my_id<<" finish solve: "<<endl;
 }
 
 // solve Circuit
@@ -576,7 +504,6 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    
    // push boundary nodes circuit's blocks
    push_bd_nodes(pg, my_id);
-   // push_bd_net_nodes();
 
   int sum_n_ffs = 0;
   int sum_n_fbs = 0;
@@ -641,19 +568,12 @@ bool Circuit::solve_IT(int &my_id, int&num_procs, MPI_CLASS &mpi_class, Tran &tr
    release_ckt_nodes(tran);
    for(size_t i=0;i<block_vec.size();i++){
 	block_vec[i]->delete_paths();
+	block_vec[i]->free_block_cholmod();
    }
-// #endif
-#if 0
-	/////////// release resources
-	if(block_info.count > 0)
-		block_info.free_block_cholmod(cm);
-	//if(my_id==0) clog<<"free block info. "<<endl;
-	cholmod_finish(cm);
-	//clog<<"cholmod finish. "<<my_id<<endl;
-#endif
-        // MPI_Barrier(MPI_COMM_WORLD);
-	return successful;
+   // MPI_Barrier(MPI_COMM_WORLD);
+   return successful;
 }
+
 // solve blocks with mpi: multi-core
 // One iteration during solving the circuit, for any block B:
 // 1. update the righthand-side of the matrix of B

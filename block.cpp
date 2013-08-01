@@ -57,7 +57,7 @@ Block::~Block(){
     delete [] bnewp_temp;
 }
 
-void Block::free_block_cholmod(cholmod_common *cm){
+void Block::free_block_cholmod(){
     cholmod_free_factor(&L, cm);
     cholmod_free_dense(&b_ck, cm);
     cholmod_free_dense(&b_new_ck, cm);

@@ -23,7 +23,7 @@ class Block{
 public:
 	Block(size_t count=0);
 	~Block();
-	void free_block_cholmod(cholmod_common *cm);
+	void free_block_cholmod();
 	void LU_decomposition();
 	void CK_decomp(Matrix & A, cholmod_common *cm);
 	void solve_CK_DC(int my_id); // solve with cholesky decomp
