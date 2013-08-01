@@ -1,13 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : map_mat.h
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// header file of MapMat class
-// This class uses a map to store the element.
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Sun Jan 30 18:37:43 CST 2011
-//   * created file
-
 #ifndef __MAP_MAT_H__
 #define __MAP_MAT_H__
 

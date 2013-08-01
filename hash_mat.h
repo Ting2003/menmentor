@@ -1,14 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : hash_mat.h
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// header file of HashMat class
-// This class uses a hash_map to store the element.
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Sun Jan 30 18:37:43 CST 2011
-//   * created file
-
-
 // TODO: can try boost::unordered_map and google-sparsehash
 #ifndef __HASH_MAT_H__
 #define __HASH_MAT_H__

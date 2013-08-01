@@ -1,11 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : triplet.cpp
-// Author : Zigang Xiao <zxiao2@illinois.edu>
-//
-// class definition of triplet
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Fri Oct 29 16:43:17 CDT 2010
-//   * created file
 #include <iostream>
 #include <iomanip>
 #include <cassert>
@@ -58,52 +50,7 @@ void Triplet::merge_matrix(map<pair<long, long>, double> &matrix_map){
 		index_pair.second = Tj[i];
 		matrix_map[index_pair]  += Tx[i];	
 	}
-	/*clog<<"orig size: "<<size()<<endl;
-	size_t count = 0;
-	map<pair<long, long>, double>::iterator it;
-	for(it = matrix_map.begin();it !=
-		matrix_map.end();it++){
-		count++;
-	}
-	clog<<"merged size: "<<count<<endl;*/
 }
-
-// another quicker method to merge the vectors
-/*void Triplet::merge(){
-	vector<bool> flag_vec;
-	flag_vec.resize(size(), false);
-
-	size_t k=0;
-	for(size_t i=0;i<size();i++){
-		if(flag_vec[i] == true) continue;
-		flag_vec[i] = true;
-		// clog<<"i: "<<i;
-		// search and add possible places
-		for(size_t j=i+1;j<size();j++){
-			if(flag_vec[j] == true)
-				continue;
-			if(Ti[i] !=Ti[j] || Tj[i]!=Tj[j])
-				continue;
-			//if(Ti[i] == Ti[j] && Tj[i]==Tj[j]){
-				Tx[i]+= Tx[j];
-				// clog<<"+j: "<<j;
-				flag_vec[j] = true;	
-			//}		
-		}
-		// clog<<" end. "<<endl;
-		// clog<<"i assign to k: "<<i<<" "<<k<<endl; 
-		if(i != k){
-			Ti[k] = Ti[i];
-			Tj[k] = Tj[i];
-			Tx[k] = Tx[i];
-		}
-		k++;	
-	}
-	// clog<<"orig size and merged: "<<size()<<" "<<k<<endl;
-	Ti.resize(k);
-	Tj.resize(k);
-	Tx.resize(k);
-}*/
 
 void Triplet::clear(){
 	Ti.clear();

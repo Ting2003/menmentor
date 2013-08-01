@@ -1,13 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : point.h
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// declaration of Point class
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Tue Jan 18 21:46:13 CST 2011
-//   * added opeartor !=
-//   * added this log
-
 #ifndef __POINT_H__
 #define __POINT_H__
 

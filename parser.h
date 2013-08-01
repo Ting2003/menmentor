@@ -1,12 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : parser.h
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// declaration of Parser class
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Sun Jan 16 16:04:03 CST 2011
-//   * added this log
-
 #ifndef __PARSER_H__
 #define __PARSER_H__
 

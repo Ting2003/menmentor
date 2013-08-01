@@ -1,12 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : vec.h
-// Author : Zigang Xiao <zxiao2@illinois.edu>
-//
-// header file of class Vec
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Tue Jan 25 14:45:57 CST 2011
-//   * created file
-//
 #ifndef __VEC_H__
 #define __VEC_H__
 

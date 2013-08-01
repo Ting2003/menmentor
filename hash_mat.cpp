@@ -1,12 +1,3 @@
-// ----------------------------------------------------------------//
-// Filename : hash_mat.cpp
-// Author : Xiao Zigang <zxiao2@illinois.edu>
-//
-// implementation file of HashMat class
-// ----------------------------------------------------------------//
-// - Zigang Xiao - Sun Jan 30 18:37:43 CST 2011
-//   * created file
-
 #include <iostream>
 #include <iomanip>
 #include "global.h"
