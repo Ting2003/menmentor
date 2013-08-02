@@ -36,7 +36,7 @@ int main(int argc, char * argv[]){
 			max_block_nodes);
 	MPI_CLASS::get_parameters(x_blocks, y_blocks, mpi_olap_ratio);
 
-	while( ( c = getopt(argc, argv, "i:a:f:e:r:b:l:x:y")) != -1 ){
+	while( ( c = getopt(argc, argv, "i:a:f:e:r:b:l:x:y:L")) != -1 ){
 		switch(c){
 		case 'e':
 			epsilon = atof(optarg);
